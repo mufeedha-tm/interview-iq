@@ -64,6 +64,21 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "InterviewIQ backend",
+    message: "Backend is running. Use /api for API routes.",
+  });
+});
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "InterviewIQ backend",
+  });
+});
+
 app.use("/api", routes);
 app.use(errorHandler);
 
