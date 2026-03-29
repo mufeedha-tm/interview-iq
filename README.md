@@ -80,6 +80,8 @@ EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
 EMAIL_USERNAME=<smtp_username>
 EMAIL_PASSWORD=<smtp_password>
+RESEND_API_KEY=<resend_api_key>
+RESEND_API_URL=https://api.resend.com/emails
 EMAIL_FROM=no-reply@example.com
 EMAIL_FROM_NAME=InterviewIQ
 # optional aliases supported:
@@ -97,6 +99,7 @@ Note:
 - The app sends mail with Nodemailer over SMTP.
 - In development, if SMTP values are missing, the app falls back to a Nodemailer test mailbox.
 - In production, configure SMTP with `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME` (or `EMAIL_USER`), and `EMAIL_PASSWORD` (or `EMAIL_PASS`).
+- You can set `RESEND_API_KEY` to deliver mail via Resend HTTPS API (recommended for Render free tier where SMTP ports can be restricted).
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when SMTP is slow.
 - `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
 - If you use MongoDB Atlas, whitelist your current IP in Atlas Network Access or the backend cannot start.
@@ -162,6 +165,8 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USERNAME=<your_gmail_address>
 EMAIL_PASSWORD=<your_gmail_app_password>
+RESEND_API_KEY=<your_resend_api_key>
+RESEND_API_URL=https://api.resend.com/emails
 EMAIL_FROM=no-reply@<your-domain>
 EMAIL_FROM_NAME=InterviewIQ
 CLOUDINARY_CLOUD_NAME=<cloud_name>

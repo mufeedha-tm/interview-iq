@@ -59,6 +59,44 @@ const createSmtpTransporter = async () => {
   };
 };
 
+const sendViaResendApi = async ({ to, subject, html, text }) => {
+  if (!email.resendApiKey) {
+    throw new Error("RESEND_API_KEY is missing");
+  }
+
+  const response = await fetch(email.resendApiUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${email.resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: getFromAddress(),
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorMessage =
+      body?.message ||
+      body?.error ||
+      body?.errors?.[0]?.message ||
+      `Resend API request failed with status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return {
+    messageId: body?.id,
+    previewUrl: null,
+    deliveredVia: "resend_api",
+  };
+};
+
 const sendViaSmtp = async ({ to, subject, html, text }) => {
   const payload = {
     from: getFromAddress(),
@@ -97,6 +135,22 @@ const sendViaSmtp = async ({ to, subject, html, text }) => {
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
+  if (email.resendApiKey) {
+    try {
+      return await sendViaResendApi({ to, subject, html, text });
+    } catch (resendError) {
+      if (process.env.NODE_ENV === "production") {
+        throw resendError;
+      }
+
+      const smtpResult = await sendViaSmtp({ to, subject, html, text });
+      return {
+        ...smtpResult,
+        fallbackReason: resendError.message,
+      };
+    }
+  }
+
   return sendViaSmtp({ to, subject, html, text });
 };
 

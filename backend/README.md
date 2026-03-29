@@ -22,6 +22,7 @@ npm run dev
 ```
 
 If using MongoDB Atlas, make sure your current IP address is allowed in Atlas Network Access before starting the server.
+For production on Render free tier, prefer `RESEND_API_KEY` (HTTP API) because SMTP ports can be restricted.
 
 You can also run:
 

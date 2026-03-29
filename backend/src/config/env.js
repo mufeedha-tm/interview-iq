@@ -21,5 +21,7 @@ module.exports = {
     pass: process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS,
     fromEmail: process.env.EMAIL_FROM || process.env.MAIL_FROM_EMAIL,
     fromName: process.env.EMAIL_FROM_NAME || "InterviewIQ",
+    resendApiKey: process.env.RESEND_API_KEY,
+    resendApiUrl: process.env.RESEND_API_URL || "https://api.resend.com/emails",
   },
 };

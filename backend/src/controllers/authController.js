@@ -148,7 +148,7 @@ const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
     );
 
     emailPreview = emailResult.previewUrl || null;
-    emailSent = emailResult.deliveredVia === "smtp";
+    emailSent = ["smtp", "resend_api"].includes(emailResult.deliveredVia);
     emailFallbackReason = emailResult.fallbackReason || null;
     emailFallbackCode = emailFallbackReason ? classifyEmailFailure(emailFallbackReason) : null;
   } catch (emailError) {
