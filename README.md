@@ -67,7 +67,7 @@ interviewiq/
 NODE_ENV=development
 PORT=4000
 CLIENT_URL=http://localhost:5173
-OTP_EMAIL_TIMEOUT_MS=5000
+OTP_EMAIL_TIMEOUT_MS=20000
 MONGODB_URI=<your_mongodb_connection_string>
 
 JWT_SECRET=<long_random_secret>
@@ -145,7 +145,7 @@ Recommended production variables:
 NODE_ENV=production
 PORT=4000
 CLIENT_URL=https://<your-frontend-url>
-OTP_EMAIL_TIMEOUT_MS=5000
+OTP_EMAIL_TIMEOUT_MS=20000
 MONGODB_URI=<your_mongodb_connection_string>
 JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=15m
