@@ -49,6 +49,32 @@ const createTokenResponse = (user, res) => {
 };
 
 const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 5000);
+const OTP_RESEND_COOLDOWN_MS = Number(process.env.OTP_RESEND_COOLDOWN_MS || 60_000);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
+
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
+const normalizeOtp = (otp) => String(otp || "").trim();
+
+const isValidEmail = (email) => EMAIL_REGEX.test(email);
+const isValidOtp = (otp) => /^\d{6}$/.test(otp);
+const isValidPassword = (password) =>
+  typeof password === "string" && password.length >= MIN_PASSWORD_LENGTH;
+
+const getOtpCooldownRemainingMs = (user) => {
+  if (!user?.otpIssuedAt) {
+    return 0;
+  }
+
+  const elapsed = Date.now() - new Date(user.otpIssuedAt).getTime();
+  const remaining = OTP_RESEND_COOLDOWN_MS - elapsed;
+  return remaining > 0 ? remaining : 0;
+};
+
+const getOtpCooldownMessage = (remainingMs) => {
+  const seconds = Math.ceil(remainingMs / 1000);
+  return `Please wait ${seconds}s before requesting another OTP`;
+};
 
 const classifyEmailFailure = (message = "") => {
   const normalizedMessage = String(message).toLowerCase();
@@ -158,15 +184,27 @@ const signup = async (req, res, next) => {
       });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    if (!isValidPassword(password)) {
+      return res
+        .status(400)
+        .json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
 
-    const existing = await User.findOne({ email: normalizedEmail });
+    const existing = await User.findOne({ email: normalizedEmail }).select("+otpIssuedAt");
     if (existing?.isVerified) {
       return res.status(400).json({ message: "Email already in use" });
+    }
+
+    if (existing) {
+      const remainingMs = getOtpCooldownRemainingMs(existing);
+      if (remainingMs > 0) {
+        return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+      }
     }
 
     const user = existing || new User({ email: normalizedEmail });
@@ -177,7 +215,7 @@ const signup = async (req, res, next) => {
     user.isVerified = false;
 
     await user.save();
-    const otp = user.createOtp();
+    const otp = user.createOtp("verify_email");
     await user.save({ validateBeforeSave: false });
 
     const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
@@ -214,9 +252,19 @@ const verifyEmailOtp = async (req, res, next) => {
       return res.status(400).json({ message: "Email and OTP are required" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedOtp = normalizeOtp(otp);
+
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
+    if (!isValidOtp(normalizedOtp)) {
+      return res.status(400).json({ message: "OTP must be a 6-digit code" });
+    }
+
     const user = await User.findOne({ email: normalizedEmail }).select(
-      "+otpCode +otpExpires +isVerified"
+      "+otpCode +otpExpires +otpPurpose +otpIssuedAt +isVerified"
     );
     if (!user) {
       return res.status(400).json({ message: "Invalid email or OTP" });
@@ -230,7 +278,11 @@ const verifyEmailOtp = async (req, res, next) => {
       return res.status(400).json({ message: "OTP expired, request a new one" });
     }
 
-    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    if (user.otpPurpose && user.otpPurpose !== "verify_email") {
+      return res.status(400).json({ message: "This OTP is for password reset, not email verification" });
+    }
+
+    const hashedOtp = crypto.createHash("sha256").update(normalizedOtp).digest("hex");
     if (hashedOtp !== user.otpCode) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
@@ -238,6 +290,8 @@ const verifyEmailOtp = async (req, res, next) => {
     user.isVerified = true;
     user.otpCode = undefined;
     user.otpExpires = undefined;
+    user.otpPurpose = undefined;
+    user.otpIssuedAt = undefined;
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json({ message: "Email verified successfully" });
@@ -253,9 +307,13 @@ const resendOtp = async (req, res, next) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
     const user = await User.findOne({ email: normalizedEmail }).select(
-      "+otpCode +otpExpires +isVerified"
+      "+otpCode +otpExpires +otpPurpose +otpIssuedAt +isVerified"
     );
     if (!user) {
       return res.status(400).json({ message: "Invalid email" });
@@ -265,7 +323,12 @@ const resendOtp = async (req, res, next) => {
       return res.status(400).json({ message: "Email already verified" });
     }
 
-    const otp = user.createOtp();
+    const remainingMs = getOtpCooldownRemainingMs(user);
+    if (remainingMs > 0) {
+      return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+    }
+
+    const otp = user.createOtp("verify_email");
     await user.save({ validateBeforeSave: false });
 
     const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
@@ -297,7 +360,11 @@ const login = async (req, res, next) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
     const user = await User.findOne({ email: normalizedEmail }).select("+password +isVerified");
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -321,6 +388,32 @@ const login = async (req, res, next) => {
   }
 };
 
+const issuePasswordResetOtp = async ({ normalizedEmail, user, logLabel }) => {
+  const otp = user.createOtp("reset_password");
+  await user.save({ validateBeforeSave: false });
+  const resetUrl = `${clientUrl}/reset-password?email=${encodeURIComponent(normalizedEmail)}`;
+
+  const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
+    to: normalizedEmail,
+    subject: "InterviewIQ password reset code",
+    html: `
+        <p>Your password reset code is <strong>${otp}</strong>. It expires in 10 minutes.</p>
+        <p>You can reset your password here:</p>
+        <p><a href="${resetUrl}">${resetUrl}</a></p>
+      `,
+    text: `Your password reset code is ${otp}. It expires in 10 minutes. Reset link: ${resetUrl}`,
+    logLabel,
+  });
+
+  return {
+    otp,
+    emailPreview,
+    emailSent,
+    emailFallbackReason,
+    emailFallbackCode,
+  };
+};
+
 const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -328,25 +421,24 @@ const forgotPassword = async (req, res, next) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail });
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail }).select("+otpIssuedAt");
     if (!user) {
       return res.status(200).json({ message: "If the account exists, you will receive an email" });
     }
 
-    const otp = user.createOtp();
-    await user.save({ validateBeforeSave: false });
-    const resetUrl = `${clientUrl}/reset-password?email=${encodeURIComponent(normalizedEmail)}`;
+    const remainingMs = getOtpCooldownRemainingMs(user);
+    if (remainingMs > 0) {
+      return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+    }
 
-    const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
-      to: normalizedEmail,
-      subject: "InterviewIQ password reset code",
-      html: `
-          <p>Your password reset code is <strong>${otp}</strong>. It expires in 10 minutes.</p>
-          <p>You can reset your password here:</p>
-          <p><a href="${resetUrl}">${resetUrl}</a></p>
-        `,
-      text: `Your password reset code is ${otp}. It expires in 10 minutes. Reset link: ${resetUrl}`,
+    const { otp, emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await issuePasswordResetOtp({
+      normalizedEmail,
+      user,
       logLabel: "Forgot password",
     });
 
@@ -363,6 +455,47 @@ const forgotPassword = async (req, res, next) => {
   }
 };
 
+const resendPasswordOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail }).select("+otpIssuedAt");
+    if (!user) {
+      return res.status(200).json({ message: "If the account exists, you will receive an email" });
+    }
+
+    const remainingMs = getOtpCooldownRemainingMs(user);
+    if (remainingMs > 0) {
+      return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+    }
+
+    const { otp, emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await issuePasswordResetOtp({
+      normalizedEmail,
+      user,
+      logLabel: "Password OTP resend",
+    });
+
+    return res.status(200).json({
+      message: emailSent
+        ? "Password reset OTP sent again"
+        : emailPreview
+          ? "A fresh password reset code is available in local email preview."
+          : "A fresh password reset code was generated. Email delivery is not available right now.",
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason, emailFallbackCode }),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const resetPassword = async (req, res, next) => {
   try {
     const { email, otp, password } = req.body;
@@ -372,21 +505,44 @@ const resetPassword = async (req, res, next) => {
         .json({ message: "Email, OTP, and new password are required" });
     }
 
-    const normalizedEmail = String(email).trim().toLowerCase();
-    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedOtp = normalizeOtp(otp);
+
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: "Please provide a valid email address" });
+    }
+
+    if (!isValidOtp(normalizedOtp)) {
+      return res.status(400).json({ message: "OTP must be a 6-digit code" });
+    }
+
+    if (!isValidPassword(password)) {
+      return res
+        .status(400)
+        .json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+
+    const hashedOtp = crypto.createHash("sha256").update(normalizedOtp).digest("hex");
     const user = await User.findOne({
       email: normalizedEmail,
       otpCode: hashedOtp,
       otpExpires: { $gt: Date.now() },
-    }).select("+otpCode +otpExpires");
+    }).select("+otpCode +otpExpires +otpPurpose +otpIssuedAt +isVerified");
 
     if (!user) {
       return res.status(400).json({ message: "OTP is invalid or has expired" });
     }
 
+    if (user.otpPurpose && user.otpPurpose !== "reset_password") {
+      return res.status(400).json({ message: "This OTP is for email verification, not password reset" });
+    }
+
     user.password = password;
+    user.isVerified = true;
     user.otpCode = undefined;
     user.otpExpires = undefined;
+    user.otpPurpose = undefined;
+    user.otpIssuedAt = undefined;
     await user.save();
 
     return res.status(200).json({ message: "Password reset successful" });
@@ -433,6 +589,16 @@ const changePassword = async (req, res, next) => {
       return res.status(400).json({
         message: "Current password and new password are required",
       });
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return res
+        .status(400)
+        .json({ message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: "New password must be different from current password" });
     }
 
     const user = await User.findById(req.user._id).select("+password");
@@ -489,6 +655,7 @@ const uploadAvatar = async (req, res, next) => {
 const refreshToken = async (req, res, next) => {
   try {
     const token = req.cookies.refreshToken;
+    const cookieOptions = getCookieOptions();
     if (!token) {
       return res.status(401).json({ message: "No refresh token provided" });
     }
@@ -496,12 +663,17 @@ const refreshToken = async (req, res, next) => {
     const decoded = jwt.verify(token, jwtRefreshSecret);
     const user = await User.findById(decoded.id);
     if (!user) {
+      res.clearCookie("accessToken", cookieOptions);
+      res.clearCookie("refreshToken", cookieOptions);
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
     createTokenResponse(user, res);
     return res.status(200).json({ message: "Token refreshed successfully" });
   } catch (error) {
+    const cookieOptions = getCookieOptions();
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Refresh token expired" });
     }
@@ -526,6 +698,7 @@ module.exports = {
   resendOtp,
   login,
   forgotPassword,
+  resendPasswordOtp,
   resetPassword,
   getMe,
   updateProfile,

@@ -33,6 +33,17 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+    otpPurpose: {
+      type: String,
+      enum: ["verify_email", "reset_password"],
+      default: null,
+      select: false,
+    },
+    otpIssuedAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     resetPasswordToken: {
       type: String,
       select: false,
@@ -136,10 +147,12 @@ userSchema.methods.isValidPassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.methods.createOtp = function () {
+userSchema.methods.createOtp = function (purpose = "verify_email") {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.otpCode = crypto.createHash("sha256").update(otp).digest("hex");
   this.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.otpPurpose = purpose;
+  this.otpIssuedAt = new Date();
   return otp;
 };
 

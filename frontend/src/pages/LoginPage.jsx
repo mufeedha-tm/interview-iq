@@ -50,7 +50,17 @@ function LoginPage() {
       toast.success('Login successful')
       navigate('/dashboard')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to log in right now.')
+      const message = error.response?.data?.message || 'Unable to log in right now.'
+      if (message.toLowerCase().includes('email not verified')) {
+        toast.info('Email verification is required before login.')
+        navigate('/verify-email', {
+          state: {
+            email: form.email.trim(),
+          },
+        })
+      } else {
+        toast.error(message)
+      }
     } finally {
       setLoading(false)
     }

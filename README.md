@@ -68,6 +68,7 @@ NODE_ENV=development
 PORT=4000
 CLIENT_URL=http://localhost:5173
 OTP_EMAIL_TIMEOUT_MS=20000
+OTP_RESEND_COOLDOWN_MS=60000
 MONGODB_URI=<your_mongodb_connection_string>
 
 JWT_SECRET=<long_random_secret>
@@ -97,6 +98,8 @@ Note:
 - In development, if SMTP values are missing, the app falls back to a Nodemailer test mailbox.
 - In production, configure SMTP with `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME` (or `EMAIL_USER`), and `EMAIL_PASSWORD` (or `EMAIL_PASS`).
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when SMTP is slow.
+- `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
+- If you use MongoDB Atlas, whitelist your current IP in Atlas Network Access or the backend cannot start.
 
 ### Frontend (`frontend/.env`)
 
@@ -149,6 +152,7 @@ NODE_ENV=production
 PORT=4000
 CLIENT_URL=https://<your-frontend-url>
 OTP_EMAIL_TIMEOUT_MS=20000
+OTP_RESEND_COOLDOWN_MS=60000
 MONGODB_URI=<your_mongodb_connection_string>
 JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=15m

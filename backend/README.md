@@ -21,6 +21,8 @@ npm install
 npm run dev
 ```
 
+If using MongoDB Atlas, make sure your current IP address is allowed in Atlas Network Access before starting the server.
+
 You can also run:
 
 ```bash

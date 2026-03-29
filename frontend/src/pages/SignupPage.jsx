@@ -137,9 +137,10 @@ function SignupPage() {
 
   function handleOtpChange(event) {
     const { name, value } = event.target
+    const nextValue = name === 'otp' ? value.replace(/\D/g, '').slice(0, 6) : value
     setOtpForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: nextValue,
     }))
   }
 
@@ -148,6 +149,11 @@ function SignupPage() {
 
     if (!otpForm.email.trim() || !otpForm.otp.trim()) {
       toast.error('Email and OTP are required.')
+      return
+    }
+
+    if (!/^\d{6}$/.test(otpForm.otp.trim())) {
+      toast.error('OTP must be a 6-digit code.')
       return
     }
 

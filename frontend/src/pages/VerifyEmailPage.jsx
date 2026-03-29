@@ -29,9 +29,10 @@ function VerifyEmailPage() {
 
   function handleChange(event) {
     const { name, value } = event.target
+    const nextValue = name === 'otp' ? value.replace(/\D/g, '').slice(0, 6) : value
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: nextValue,
     }))
   }
 
@@ -40,6 +41,11 @@ function VerifyEmailPage() {
 
     if (!form.email.trim() || !form.otp.trim()) {
       toast.error('Email and OTP are required.')
+      return
+    }
+
+    if (!/^\d{6}$/.test(form.otp.trim())) {
+      toast.error('OTP must be a 6-digit code.')
       return
     }
 

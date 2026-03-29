@@ -70,6 +70,16 @@ function ResetPasswordPage() {
       return
     }
 
+    if (!/^\d{6}$/.test(payload.otp)) {
+      toast.error('OTP must be a 6-digit code.')
+      return
+    }
+
+    if (payload.password.length < 6) {
+      toast.error('New password must be at least 6 characters.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -115,9 +125,10 @@ function ResetPasswordPage() {
 
   function handleChange(event) {
     const { name, value } = event.target
+    const nextValue = name === 'otp' ? value.replace(/\D/g, '').slice(0, 6) : value
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: nextValue,
     }))
   }
 
@@ -189,6 +200,7 @@ function ResetPasswordPage() {
               value={form.password}
               onChange={handleChange}
               placeholder="New password"
+              minLength={6}
               required
             />
             <button
