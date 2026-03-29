@@ -15,13 +15,28 @@ const configuredClientOrigins = (process.env.CLIENT_URL || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowedOrigins = [...new Set([...configuredClientOrigins, ...defaultClientOrigins])];
+const wildcardToRegex = (pattern) =>
+  new RegExp(
+    `^${pattern
+      .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\*/g, ".*")}$`
+  );
+
+const allowedOriginPatterns = configuredClientOrigins
+  .filter((origin) => origin.includes("*"))
+  .map(wildcardToRegex);
+
+const allowedOrigins = [
+  ...new Set([...configuredClientOrigins.filter((origin) => !origin.includes("*")), ...defaultClientOrigins]),
+];
 
 app.use(
   cors({
     origin(origin, callback) {
       // Allow non-browser requests (no Origin header) and known client origins.
-      if (!origin || allowedOrigins.includes(origin)) {
+      const matchesWildcardOrigin = allowedOriginPatterns.some((pattern) => pattern.test(origin || ""));
+
+      if (!origin || allowedOrigins.includes(origin) || matchesWildcardOrigin) {
         return callback(null, true);
       }
       return callback(new Error(`CORS blocked for origin: ${origin}`));
