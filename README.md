@@ -139,8 +139,8 @@ Copy the printed `whsec_...` to `STRIPE_WEBHOOK_SECRET` in `backend/.env`.
 
 Fill these when deployed:
 
-- Frontend URL (Vercel/Netlify): `https://<your-frontend-url>`
-- Backend URL (Render/Railway): `https://<your-backend-url>`
+- Frontend URL (Vercel/Netlify): `https://interview-iq-ruddy-one.vercel.app`
+- Backend URL (Render/Railway): `https://interviewiq-backend-lzdm.onrender.com`
 - MongoDB Atlas cluster: `<cluster-name-or-connection-proof>`
 
 Recommended production variables:
@@ -218,10 +218,10 @@ Deployment checklist:
 
 | Requirement | Status |
 |---|---|
-| Frontend Hosted | Pending (add URL) |
-| Backend Hosted | Pending (add URL) |
+| Frontend Hosted | Done (`https://interview-iq-ruddy-one.vercel.app`) |
+| Backend Hosted | Done (`https://interviewiq-backend-lzdm.onrender.com`) |
 | MongoDB Atlas Connected | Pending (add proof/link) |
-| GitHub Repo Link | Pending (add repo URL) |
+| GitHub Repo Link | Done (`https://github.com/mufeedha-tm/interview-iq`) |
 | README with Screenshots | Pending (add screenshots below) |
 | Demo Video (2-3 min) | Pending (add link below) |
 
