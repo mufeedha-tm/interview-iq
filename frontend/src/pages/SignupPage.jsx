@@ -26,6 +26,14 @@ function SignupPage() {
     otp: '',
   })
 
+  const emailFallbackHelp = {
+    timeout: 'The backend reached SMTP, but the mail request timed out.',
+    auth_failed: 'SMTP rejected the login. Recheck the mail username or app password.',
+    config_missing: 'SMTP environment variables are missing on the backend.',
+    connection_failed: 'The backend could not connect to the mail server.',
+    delivery_failed: 'The mail provider rejected or failed the delivery request.',
+  }
+
   const emailStatusTitle = signupResult?.emailSent
     ? 'Email delivery: Sent to inbox'
     : signupResult?.emailPreview
@@ -112,6 +120,7 @@ function SignupPage() {
       setSignupResult({
         emailPreview: data.emailPreview || '',
         emailSent: data.emailSent,
+        emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
         developmentOtp: data.developmentOtp || '',
       })
@@ -177,6 +186,7 @@ function SignupPage() {
         ...current,
         emailPreview: data.emailPreview || '',
         emailSent: data.emailSent,
+        emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
         developmentOtp: data.developmentOtp || '',
       }))
@@ -302,6 +312,12 @@ function SignupPage() {
             >
               <p className="font-semibold">{emailStatusTitle}</p>
               <p className="mt-1">{emailStatusMessage}</p>
+              {!signupResult.emailSent && signupResult.emailFallbackCode ? (
+                <p className="mt-2 text-xs">
+                  Delivery code: {signupResult.emailFallbackCode}
+                  {emailFallbackHelp[signupResult.emailFallbackCode] ? ` - ${emailFallbackHelp[signupResult.emailFallbackCode]}` : ''}
+                </p>
+              ) : null}
               {!signupResult.emailSent && signupResult.emailFallbackReason ? (
                 <p className="mt-2 text-xs">
                   Debug reason: {signupResult.emailFallbackReason}

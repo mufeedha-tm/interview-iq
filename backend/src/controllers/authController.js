@@ -50,6 +50,47 @@ const createTokenResponse = (user, res) => {
 
 const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 5000);
 
+const classifyEmailFailure = (message = "") => {
+  const normalizedMessage = String(message).toLowerCase();
+
+  if (!normalizedMessage) {
+    return "delivery_failed";
+  }
+
+  if (normalizedMessage.includes("timed out")) {
+    return "timeout";
+  }
+
+  if (
+    normalizedMessage.includes("invalid login") ||
+    normalizedMessage.includes("username and password not accepted") ||
+    normalizedMessage.includes("authentication unsuccessful") ||
+    normalizedMessage.includes("auth")
+  ) {
+    return "auth_failed";
+  }
+
+  if (
+    normalizedMessage.includes("smtp is required in production") ||
+    normalizedMessage.includes("config missing")
+  ) {
+    return "config_missing";
+  }
+
+  if (
+    normalizedMessage.includes("econnrefused") ||
+    normalizedMessage.includes("enotfound") ||
+    normalizedMessage.includes("eai_again") ||
+    normalizedMessage.includes("greeting never received") ||
+    normalizedMessage.includes("connection") ||
+    normalizedMessage.includes("certificate")
+  ) {
+    return "connection_failed";
+  }
+
+  return "delivery_failed";
+};
+
 const withTimeout = (promise, timeoutMs, timeoutMessage) =>
   new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -71,6 +112,7 @@ const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
   let emailPreview = null;
   let emailSent = false;
   let emailFallbackReason = null;
+  let emailFallbackCode = null;
 
   try {
     const emailResult = await withTimeout(
@@ -82,8 +124,10 @@ const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
     emailPreview = emailResult.previewUrl || null;
     emailSent = emailResult.deliveredVia === "smtp";
     emailFallbackReason = emailResult.fallbackReason || null;
+    emailFallbackCode = emailFallbackReason ? classifyEmailFailure(emailFallbackReason) : null;
   } catch (emailError) {
     emailFallbackReason = emailError.message || "Email delivery failed";
+    emailFallbackCode = classifyEmailFailure(emailFallbackReason);
     console.error(`${logLabel} email delivery failed:`, emailFallbackReason);
   }
 
@@ -91,12 +135,14 @@ const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
     emailPreview,
     emailSent,
     emailFallbackReason,
+    emailFallbackCode,
   };
 };
 
-const buildOtpDeliveryResponse = ({ otp, emailSent, emailPreview, emailFallbackReason }) => ({
+const buildOtpDeliveryResponse = ({ otp, emailSent, emailPreview, emailFallbackReason, emailFallbackCode }) => ({
   emailPreview,
   emailSent,
+  emailFallbackCode,
   emailFallbackReason:
     process.env.NODE_ENV === "production" ? undefined : emailFallbackReason || undefined,
   developmentOtp: process.env.NODE_ENV === "production" || emailSent ? undefined : otp,
@@ -134,7 +180,7 @@ const signup = async (req, res, next) => {
     const otp = user.createOtp();
     await user.save({ validateBeforeSave: false });
 
-    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+    const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
       to: normalizedEmail,
       subject: "Verify your InterviewIQ account",
       html: `<p>Welcome to InterviewIQ! Your verification code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
@@ -154,7 +200,7 @@ const signup = async (req, res, next) => {
           : emailPreview
             ? "Signup successful. Email is available in local preview for development."
             : "Signup successful. Email delivery is not available right now, but you can still verify your OTP below.",
-      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason, emailFallbackCode }),
     });
   } catch (error) {
     next(error);
@@ -222,7 +268,7 @@ const resendOtp = async (req, res, next) => {
     const otp = user.createOtp();
     await user.save({ validateBeforeSave: false });
 
-    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+    const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
       to: normalizedEmail,
       subject: "Your new InterviewIQ verification code",
       html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
@@ -236,7 +282,7 @@ const resendOtp = async (req, res, next) => {
         : emailPreview
           ? "A new OTP was generated. Open the local email preview in development."
           : "A new OTP was generated. Email delivery is not available right now, so use the OTP shown in development.",
-      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason, emailFallbackCode }),
     });
   } catch (error) {
     next(error);
@@ -292,7 +338,7 @@ const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${clientUrl}/reset-password?email=${encodeURIComponent(normalizedEmail)}`;
 
-    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+    const { emailPreview, emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
       to: normalizedEmail,
       subject: "InterviewIQ password reset code",
       html: `
@@ -310,7 +356,7 @@ const forgotPassword = async (req, res, next) => {
         : emailPreview
           ? "If the account exists, a reset code is available in local email preview."
           : "If the account exists, a reset code was generated. Email delivery is not available right now.",
-      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason, emailFallbackCode }),
     });
   } catch (error) {
     next(error);

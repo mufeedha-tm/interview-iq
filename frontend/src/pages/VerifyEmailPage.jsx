@@ -12,11 +12,20 @@ function VerifyEmailPage() {
     otp: location.state?.developmentOtp || '',
   })
   const [emailSent, setEmailSent] = useState(Boolean(location.state?.emailSent))
+  const [emailFallbackCode, setEmailFallbackCode] = useState(location.state?.emailFallbackCode || '')
   const [emailFallbackReason, setEmailFallbackReason] = useState(location.state?.emailFallbackReason || '')
   const [emailPreview, setEmailPreview] = useState(location.state?.emailPreview || '')
   const [developmentOtp, setDevelopmentOtp] = useState(location.state?.developmentOtp || '')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+
+  const emailFallbackHelp = {
+    timeout: 'The backend reached SMTP, but the mail request timed out.',
+    auth_failed: 'SMTP rejected the login. Recheck the mail username or app password.',
+    config_missing: 'SMTP environment variables are missing on the backend.',
+    connection_failed: 'The backend could not connect to the mail server.',
+    delivery_failed: 'The mail provider rejected or failed the delivery request.',
+  }
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -66,6 +75,7 @@ function VerifyEmailPage() {
     try {
       const data = await resendOtp(form.email.trim())
       setEmailSent(Boolean(data.emailSent))
+      setEmailFallbackCode(data.emailFallbackCode || '')
       setEmailFallbackReason(data.emailFallbackReason || '')
       setEmailPreview(data.emailPreview || '')
       setDevelopmentOtp(data.developmentOtp || '')
@@ -118,6 +128,12 @@ function VerifyEmailPage() {
             <p className="mt-1">
               {emailSent ? 'OTP mail is sent to your inbox.' : 'Use local preview/development OTP while SMTP is not delivering.'}
             </p>
+            {!emailSent && emailFallbackCode ? (
+              <p className="mt-2 text-xs">
+                Delivery code: {emailFallbackCode}
+                {emailFallbackHelp[emailFallbackCode] ? ` - ${emailFallbackHelp[emailFallbackCode]}` : ''}
+              </p>
+            ) : null}
             {!emailSent && emailFallbackReason ? <p className="mt-2 text-xs">Debug reason: {emailFallbackReason}</p> : null}
           </div>
         </div>
