@@ -27,6 +27,22 @@ function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
 
+  const emailStatusTitle = emailSent
+    ? 'Email delivery: Sent to inbox'
+    : emailPreview
+      ? 'Email delivery: Preview available'
+      : developmentOtp
+        ? 'Email delivery: Development OTP'
+        : 'Email delivery: Unavailable'
+
+  const emailStatusMessage = emailSent
+    ? 'OTP mail is sent to your inbox.'
+    : emailPreview
+      ? 'SMTP is not delivering to inbox right now. Open the preview link below to get the OTP.'
+      : developmentOtp
+        ? 'SMTP is not delivering to inbox right now. Use the development OTP shown below.'
+        : 'SMTP delivery failed, and no preview OTP is available from the backend right now.'
+
   if (!initialEmail) {
     return <Navigate to="/forgot-password" replace />
   }
@@ -111,10 +127,8 @@ function ResetPasswordPage() {
             emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'
           }`}
         >
-          <p className="font-semibold">{emailSent ? 'Email delivery: Sent to inbox' : 'Email delivery: Preview mode'}</p>
-          <p className="mt-1">
-            {emailSent ? 'OTP mail is sent to your inbox.' : 'Use local preview/development OTP while SMTP is not delivering.'}
-          </p>
+          <p className="font-semibold">{emailStatusTitle}</p>
+          <p className="mt-1">{emailStatusMessage}</p>
           {!emailSent && emailFallbackReason ? <p className="mt-2 text-xs">Debug reason: {emailFallbackReason}</p> : null}
         </div>
 

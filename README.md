@@ -64,8 +64,10 @@ interviewiq/
 ### Backend (`backend/.env`)
 
 ```env
+NODE_ENV=development
 PORT=4000
 CLIENT_URL=http://localhost:5173
+OTP_EMAIL_TIMEOUT_MS=5000
 MONGODB_URI=<your_mongodb_connection_string>
 
 JWT_SECRET=<long_random_secret>
@@ -91,6 +93,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 Note:
 - In development, if SMTP values are missing, the app falls back to a Nodemailer test mailbox.
 - In production, SMTP is mandatory and the app will reject email operations without full SMTP config.
+- `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when SMTP is slow.
 
 ### Frontend (`frontend/.env`)
 
@@ -133,6 +136,47 @@ Fill these when deployed:
 - Frontend URL (Vercel/Netlify): `https://<your-frontend-url>`
 - Backend URL (Render/Railway): `https://<your-backend-url>`
 - MongoDB Atlas cluster: `<cluster-name-or-connection-proof>`
+
+Recommended production variables:
+
+### Backend host
+
+```env
+NODE_ENV=production
+PORT=4000
+CLIENT_URL=https://<your-frontend-url>
+OTP_EMAIL_TIMEOUT_MS=5000
+MONGODB_URI=<your_mongodb_connection_string>
+JWT_SECRET=<long_random_secret>
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=<different_long_random_secret>
+JWT_REFRESH_EXPIRES_IN=7d
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USERNAME=<your_gmail_address>
+EMAIL_PASSWORD=<your_gmail_app_password>
+CLOUDINARY_CLOUD_NAME=<cloud_name>
+CLOUDINARY_API_KEY=<api_key>
+CLOUDINARY_API_SECRET=<api_secret>
+STRIPE_SECRET_KEY=sk_live_or_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+### Frontend host
+
+```env
+VITE_API_BASE_URL=https://<your-backend-url>/api
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_or_test_...
+```
+
+Deployment checklist:
+
+1. Push the latest code to GitHub.
+2. Redeploy the backend first so auth/email route changes go live before the frontend points to them.
+3. Confirm the frontend `VITE_API_BASE_URL` points to the deployed backend `/api` URL.
+4. Confirm backend `CLIENT_URL` exactly matches the deployed frontend origin.
+5. Do not commit real `.env` files to GitHub. Commit only `.env.example`.
+6. If secrets were already committed, rotate MongoDB, Gmail, Cloudinary, Stripe, and JWT secrets before redeploying.
 
 ## 8) Submission Checklist
 

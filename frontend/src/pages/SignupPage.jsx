@@ -26,6 +26,22 @@ function SignupPage() {
     otp: '',
   })
 
+  const emailStatusTitle = signupResult?.emailSent
+    ? 'Email delivery: Sent to inbox'
+    : signupResult?.emailPreview
+      ? 'Email delivery: Preview available'
+      : signupResult?.developmentOtp
+        ? 'Email delivery: Development OTP'
+        : 'Email delivery: Unavailable'
+
+  const emailStatusMessage = signupResult?.emailSent
+    ? 'OTP has been sent to your mailbox.'
+    : signupResult?.emailPreview
+      ? 'SMTP is not delivering to inbox right now. Open the preview link below to get the OTP.'
+      : signupResult?.developmentOtp
+        ? 'SMTP is not delivering to inbox right now. Use the development OTP shown below.'
+        : 'SMTP delivery failed, and no preview OTP is available from the backend right now.'
+
   function validateForm() {
     const nextErrors = {}
 
@@ -284,14 +300,8 @@ function SignupPage() {
                   : 'border-amber-200 bg-amber-50 text-amber-800'
               }`}
             >
-              <p className="font-semibold">
-                {signupResult.emailSent ? 'Email delivery: Sent to inbox' : 'Email delivery: Preview mode'}
-              </p>
-              <p className="mt-1">
-                {signupResult.emailSent
-                  ? 'OTP has been sent to your mailbox.'
-                  : 'SMTP is not delivering to inbox right now. Use preview or development OTP.'}
-              </p>
+              <p className="font-semibold">{emailStatusTitle}</p>
+              <p className="mt-1">{emailStatusMessage}</p>
               {!signupResult.emailSent && signupResult.emailFallbackReason ? (
                 <p className="mt-2 text-xs">
                   Debug reason: {signupResult.emailFallbackReason}

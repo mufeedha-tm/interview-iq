@@ -48,6 +48,60 @@ const createTokenResponse = (user, res) => {
   };
 };
 
+const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 5000);
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+
+const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
+  let emailPreview = null;
+  let emailSent = false;
+  let emailFallbackReason = null;
+
+  try {
+    const emailResult = await withTimeout(
+      sendEmail({ to, subject, html, text }),
+      OTP_EMAIL_TIMEOUT_MS,
+      `Email delivery timed out after ${OTP_EMAIL_TIMEOUT_MS}ms`
+    );
+
+    emailPreview = emailResult.previewUrl || null;
+    emailSent = emailResult.deliveredVia === "smtp";
+    emailFallbackReason = emailResult.fallbackReason || null;
+  } catch (emailError) {
+    emailFallbackReason = emailError.message || "Email delivery failed";
+    console.error(`${logLabel} email delivery failed:`, emailFallbackReason);
+  }
+
+  return {
+    emailPreview,
+    emailSent,
+    emailFallbackReason,
+  };
+};
+
+const buildOtpDeliveryResponse = ({ otp, emailSent, emailPreview, emailFallbackReason }) => ({
+  emailPreview,
+  emailSent,
+  emailFallbackReason:
+    process.env.NODE_ENV === "production" ? undefined : emailFallbackReason || undefined,
+  developmentOtp: process.env.NODE_ENV === "production" || emailSent ? undefined : otp,
+});
+
 const signup = async (req, res, next) => {
   try {
     const { email, password, firstName = "", lastName = "", targetRole = "" } = req.body;
@@ -65,49 +119,42 @@ const signup = async (req, res, next) => {
     const normalizedEmail = String(email).trim().toLowerCase();
 
     const existing = await User.findOne({ email: normalizedEmail });
-    if (existing) {
+    if (existing?.isVerified) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    const user = await User.create({
-      email: normalizedEmail,
-      password,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      targetRole: targetRole.trim(),
-    });
+    const user = existing || new User({ email: normalizedEmail });
+    user.password = password;
+    user.firstName = firstName.trim();
+    user.lastName = lastName.trim();
+    user.targetRole = targetRole.trim();
+    user.isVerified = false;
+
+    await user.save();
     const otp = user.createOtp();
     await user.save({ validateBeforeSave: false });
 
-    let emailPreview = null;
-    let emailSent = false;
-    let emailFallbackReason = null;
-
-    try {
-      const emailResult = await sendEmail({
-        to: email,
-        subject: "Verify your InterviewIQ account",
-        html: `<p>Welcome to InterviewIQ! Your verification code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
-        text: `Welcome to InterviewIQ! Your verification code is ${otp}.`,
-      });
-
-      emailPreview = emailResult.previewUrl || null;
-      emailSent = emailResult.deliveredVia === "smtp";
-      emailFallbackReason = emailResult.fallbackReason || null;
-    } catch (emailError) {
-      console.error("Signup email delivery failed:", emailError.message);
-    }
+    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+      to: normalizedEmail,
+      subject: "Verify your InterviewIQ account",
+      html: `<p>Welcome to InterviewIQ! Your verification code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
+      text: `Welcome to InterviewIQ! Your verification code is ${otp}.`,
+      logLabel: "Signup",
+    });
 
     return res.status(201).json({
-      message: emailSent
-        ? "Signup successful, check your email for the OTP"
-        : emailPreview
-          ? "Signup successful. Email is available in local preview for development."
-          : "Signup successful. Email delivery is not available right now, but you can still verify your OTP below.",
-      emailPreview,
-      emailSent,
-      emailFallbackReason: process.env.NODE_ENV === "production" ? undefined : emailFallbackReason || undefined,
-      developmentOtp: process.env.NODE_ENV === "production" || emailSent ? undefined : otp,
+      message: existing
+        ? emailSent
+          ? "Account already exists but is not verified. We sent you a fresh OTP."
+          : emailPreview
+            ? "Account already exists but is not verified. A fresh OTP is available in local preview."
+            : "Account already exists but is not verified. Use the fresh OTP below or request another one."
+        : emailSent
+          ? "Signup successful, check your email for the OTP"
+          : emailPreview
+            ? "Signup successful. Email is available in local preview for development."
+            : "Signup successful. Email delivery is not available right now, but you can still verify your OTP below.",
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
     });
   } catch (error) {
     next(error);
@@ -175,24 +222,13 @@ const resendOtp = async (req, res, next) => {
     const otp = user.createOtp();
     await user.save({ validateBeforeSave: false });
 
-    let emailPreview = null;
-    let emailSent = false;
-    let emailFallbackReason = null;
-
-    try {
-      const emailResult = await sendEmail({
-        to: normalizedEmail,
-        subject: "Your new InterviewIQ verification code",
-        html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
-        text: `Your new verification code is ${otp}.`,
-      });
-
-      emailPreview = emailResult.previewUrl || null;
-      emailSent = emailResult.deliveredVia === "smtp";
-      emailFallbackReason = emailResult.fallbackReason || null;
-    } catch (emailError) {
-      console.error("Resend OTP email delivery failed:", emailError.message);
-    }
+    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+      to: normalizedEmail,
+      subject: "Your new InterviewIQ verification code",
+      html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
+      text: `Your new verification code is ${otp}.`,
+      logLabel: "Resend OTP",
+    });
 
     return res.status(200).json({
       message: emailSent
@@ -200,10 +236,7 @@ const resendOtp = async (req, res, next) => {
         : emailPreview
           ? "A new OTP was generated. Open the local email preview in development."
           : "A new OTP was generated. Email delivery is not available right now, so use the OTP shown in development.",
-      emailPreview,
-      emailSent,
-      emailFallbackReason: process.env.NODE_ENV === "production" ? undefined : emailFallbackReason || undefined,
-      developmentOtp: process.env.NODE_ENV === "production" || emailSent ? undefined : otp,
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
     });
   } catch (error) {
     next(error);
@@ -259,27 +292,17 @@ const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${clientUrl}/reset-password?email=${encodeURIComponent(normalizedEmail)}`;
 
-    let emailPreview = null;
-    let emailSent = false;
-    let emailFallbackReason = null;
-
-    try {
-      const emailResult = await sendEmail({
-        to: normalizedEmail,
-        subject: "InterviewIQ password reset code",
-        html: `
+    const { emailPreview, emailSent, emailFallbackReason } = await deliverOtpEmail({
+      to: normalizedEmail,
+      subject: "InterviewIQ password reset code",
+      html: `
           <p>Your password reset code is <strong>${otp}</strong>. It expires in 10 minutes.</p>
           <p>You can reset your password here:</p>
           <p><a href="${resetUrl}">${resetUrl}</a></p>
         `,
-        text: `Your password reset code is ${otp}. It expires in 10 minutes. Reset link: ${resetUrl}`,
-      });
-      emailPreview = emailResult.previewUrl || null;
-      emailSent = emailResult.deliveredVia === "smtp";
-      emailFallbackReason = emailResult.fallbackReason || null;
-    } catch (emailError) {
-      console.error("Forgot password email delivery failed:", emailError.message);
-    }
+      text: `Your password reset code is ${otp}. It expires in 10 minutes. Reset link: ${resetUrl}`,
+      logLabel: "Forgot password",
+    });
 
     return res.status(200).json({
       message: emailSent
@@ -287,10 +310,7 @@ const forgotPassword = async (req, res, next) => {
         : emailPreview
           ? "If the account exists, a reset code is available in local email preview."
           : "If the account exists, a reset code was generated. Email delivery is not available right now.",
-      emailPreview,
-      emailSent,
-      emailFallbackReason: process.env.NODE_ENV === "production" ? undefined : emailFallbackReason || undefined,
-      developmentOtp: process.env.NODE_ENV === "production" || emailSent ? undefined : otp,
+      ...buildOtpDeliveryResponse({ otp, emailSent, emailPreview, emailFallbackReason }),
     });
   } catch (error) {
     next(error);
