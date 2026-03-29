@@ -273,7 +273,7 @@ const resendOtp = async (req, res, next) => {
       subject: "Your new InterviewIQ verification code",
       html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
       text: `Your new verification code is ${otp}.`,
-      logLabel: "Resend OTP",
+      logLabel: "OTP resend",
     });
 
     return res.status(200).json({

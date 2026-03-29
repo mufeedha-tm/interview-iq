@@ -79,6 +79,8 @@ EMAIL_HOST=smtp.example.com
 EMAIL_PORT=587
 EMAIL_USERNAME=<smtp_username>
 EMAIL_PASSWORD=<smtp_password>
+EMAIL_FROM=no-reply@example.com
+EMAIL_FROM_NAME=InterviewIQ
 # optional aliases supported:
 # EMAIL_USER / EMAIL_PASS
 
@@ -91,8 +93,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note:
+- The app sends mail with Nodemailer over SMTP.
 - In development, if SMTP values are missing, the app falls back to a Nodemailer test mailbox.
-- In production, SMTP is mandatory and the app will reject email operations without full SMTP config.
+- In production, configure SMTP with `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME` (or `EMAIL_USER`), and `EMAIL_PASSWORD` (or `EMAIL_PASS`).
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when SMTP is slow.
 
 ### Frontend (`frontend/.env`)
@@ -155,6 +158,8 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USERNAME=<your_gmail_address>
 EMAIL_PASSWORD=<your_gmail_app_password>
+EMAIL_FROM=no-reply@<your-domain>
+EMAIL_FROM_NAME=InterviewIQ
 CLOUDINARY_CLOUD_NAME=<cloud_name>
 CLOUDINARY_API_KEY=<api_key>
 CLOUDINARY_API_SECRET=<api_secret>

@@ -1,6 +1,12 @@
 const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
 
+const getFromAddress = () => {
+  const fromEmail = email.fromEmail || email.user || "no-reply@interviewiq.app";
+
+  return `${email.fromName || "InterviewIQ"} <${fromEmail}>`;
+};
+
 const createTestTransporter = async () => {
   const testAccount = await nodemailer.createTestAccount();
   return nodemailer.createTransport({
@@ -14,7 +20,7 @@ const createTestTransporter = async () => {
   });
 };
 
-const createTransporter = async () => {
+const createSmtpTransporter = async () => {
   const missingHostOrPort = !email.host || !email.port;
   const missingCredentials = !email.user || !email.pass;
 
@@ -53,17 +59,17 @@ const createTransporter = async () => {
   };
 };
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendViaSmtp = async ({ to, subject, html, text }) => {
   const payload = {
-    from: `InterviewIQ <${email.user || "no-reply@interviewiq.app"}>`,
+    from: getFromAddress(),
     to,
     subject,
     html,
     text,
   };
 
-  const { transporter, deliveredVia } = await createTransporter();
-  const defaultFallbackReason = deliveredVia === "ethereal" ? "SMTP delivery not active." : null;
+  const { transporter, deliveredVia, fallbackReason } = await createSmtpTransporter();
+  const defaultFallbackReason = deliveredVia === "ethereal" ? fallbackReason || "SMTP delivery not active." : null;
 
   try {
     const info = await transporter.sendMail(payload);
@@ -78,7 +84,6 @@ const sendEmail = async ({ to, subject, html, text }) => {
       throw primaryError;
     }
 
-    // Development fallback when configured SMTP fails (e.g., wrong app password).
     const fallbackTransporter = await createTestTransporter();
     const fallbackInfo = await fallbackTransporter.sendMail(payload);
 
@@ -91,20 +96,24 @@ const sendEmail = async ({ to, subject, html, text }) => {
   }
 };
 
+const sendEmail = async ({ to, subject, html, text }) => {
+  return sendViaSmtp({ to, subject, html, text });
+};
+
 const sendInterviewSummaryEmail = async (user, interview) => {
   const reportUrl = `${clientUrl}/history`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #2D3748;">Interview Analysis Ready</h2>
-      <p style="color: #4A5568; font-size: 16px;">Hi ${user.firstName || 'Candidate'},</p>
+      <p style="color: #4A5568; font-size: 16px;">Hi ${user.firstName || "Candidate"},</p>
       <p style="color: #4A5568; font-size: 16px;">
         Your AI-powered mock interview for <strong>${interview.title}</strong> is complete!
       </p>
       
       <div style="background-color: #F7FAFC; padding: 20px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; color: #2B6CB0;">Performance Score: ${interview.results.score}%</h3>
-        <p style="color: #4A5568;"><strong>Key Strengths:</strong> ${interview.results.strengths?.slice(0, 2).join(', ') || 'N/A'}</p>
-        <p style="color: #4A5568;"><strong>Focus Areas:</strong> ${interview.results.improvements?.slice(0, 2).join(', ') || 'N/A'}</p>
+        <p style="color: #4A5568;"><strong>Key Strengths:</strong> ${interview.results.strengths?.slice(0, 2).join(", ") || "N/A"}</p>
+        <p style="color: #4A5568;"><strong>Focus Areas:</strong> ${interview.results.improvements?.slice(0, 2).join(", ") || "N/A"}</p>
       </div>
 
       <p style="color: #4A5568; font-size: 16px;">
