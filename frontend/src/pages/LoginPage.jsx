@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../components/UI'
 import { Icon } from '../components/Icons'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { loginUser } from '../services/authService'
 
 function LoginPage() {

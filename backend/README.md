@@ -22,7 +22,8 @@ npm run dev
 ```
 
 If using MongoDB Atlas, make sure your current IP address is allowed in Atlas Network Access before starting the server.
-For production on Render free tier, prefer `RESEND_API_KEY` (HTTP API) because SMTP ports can be restricted.
+For OTP/password-reset emails, configure `EMAIL_SERVICE`, `EMAIL_USER`, and `EMAIL_PASS` and send with Nodemailer.
+If using Gmail, keep `EMAIL_FROM` equal to `EMAIL_USER`.
 
 You can also run:
 

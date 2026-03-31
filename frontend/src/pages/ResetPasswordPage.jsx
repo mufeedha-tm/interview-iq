@@ -14,14 +14,12 @@ function ResetPasswordPage() {
   const emailFromQuery = searchParams.get('email') || ''
   const initialEmail = (emailFromState || emailFromQuery).trim()
 
-  const [emailPreview, setEmailPreview] = useState(location.state?.emailPreview || '')
   const [emailSent, setEmailSent] = useState(Boolean(location.state?.emailSent))
   const [emailFallbackCode, setEmailFallbackCode] = useState(location.state?.emailFallbackCode || '')
   const [emailFallbackReason, setEmailFallbackReason] = useState(location.state?.emailFallbackReason || '')
-  const [developmentOtp, setDevelopmentOtp] = useState(location.state?.developmentOtp || '')
   const [form, setForm] = useState({
     email: initialEmail,
-    otp: location.state?.developmentOtp || '',
+    otp: '',
     password: '',
   })
   const [showPassword, setShowPassword] = useState(false)
@@ -29,28 +27,20 @@ function ResetPasswordPage() {
   const [resending, setResending] = useState(false)
 
   const emailFallbackHelp = {
-    timeout: 'The backend reached SMTP, but the mail request timed out.',
-    auth_failed: 'SMTP rejected the login. Recheck the mail username or app password.',
-    config_missing: 'SMTP environment variables are missing on the backend.',
-    connection_failed: 'The backend could not connect to the mail server.',
+    timeout: 'The backend reached the email provider, but the request timed out.',
+    auth_failed: 'Email login failed. Recheck EMAIL_USER and EMAIL_PASS.',
+    config_missing: 'Email environment variables are missing on the backend.',
+    connection_failed: 'The backend could not connect to the email provider.',
     delivery_failed: 'The mail provider rejected or failed the delivery request.',
   }
 
   const emailStatusTitle = emailSent
     ? 'Email delivery: Sent to inbox'
-    : emailPreview
-      ? 'Email delivery: Preview available'
-      : developmentOtp
-        ? 'Email delivery: Development OTP'
-        : 'Email delivery: Unavailable'
+    : 'Email delivery: Failed'
 
   const emailStatusMessage = emailSent
     ? 'OTP mail is sent to your inbox.'
-    : emailPreview
-      ? 'SMTP is not delivering to inbox right now. Open the preview link below to get the OTP.'
-      : developmentOtp
-        ? 'SMTP is not delivering to inbox right now. Use the development OTP shown below.'
-        : 'SMTP delivery failed, and no preview OTP is available from the backend right now.'
+    : 'Unable to deliver OTP email right now. Please try resending.'
 
   if (!initialEmail) {
     return <Navigate to="/forgot-password" replace />
@@ -105,17 +95,7 @@ function ResetPasswordPage() {
       setEmailSent(Boolean(data.emailSent))
       setEmailFallbackCode(data.emailFallbackCode || '')
       setEmailFallbackReason(data.emailFallbackReason || '')
-      setEmailPreview(data.emailPreview || '')
-      setDevelopmentOtp(data.developmentOtp || '')
-      setForm((current) => ({
-        ...current,
-        otp: data.developmentOtp || current.otp,
-      }))
-      if (!data.emailSent && !data.emailPreview && !data.developmentOtp) {
-        toast.info('If the account exists, OTP was generated. Check email delivery config.')
-      } else {
-        toast.success(data.message || 'Password reset OTP sent again.')
-      }
+      toast.success(data.message || 'Password reset OTP sent again.')
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to resend password OTP.')
     } finally {
@@ -158,26 +138,6 @@ function ResetPasswordPage() {
           ) : null}
           {!emailSent && emailFallbackReason ? <p className="mt-2 text-xs">Debug reason: {emailFallbackReason}</p> : null}
         </div>
-
-        {emailPreview ? (
-          <a
-            className="inline-flex text-sm font-medium text-coral-500 underline"
-            href={emailPreview}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open email preview
-          </a>
-        ) : null}
-
-        {developmentOtp && !emailSent ? (
-          <div className="rounded-3xl border border-coral-200 bg-coral-50 p-4 text-sm text-coral-700">
-            <p className="font-semibold">Development OTP</p>
-            <p className="mt-1">
-              Use this code for local testing: <span className="font-bold">{developmentOtp}</span>
-            </p>
-          </div>
-        ) : null}
 
         <div className="space-y-4">
           <input

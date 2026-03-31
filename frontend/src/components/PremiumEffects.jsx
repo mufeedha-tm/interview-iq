@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from 'framer-motion'
 
+const MotionDiv = motion.div
+
 export function PageTransition({ children, className = '' }) {
   return (
-    <motion.div
+    <MotionDiv
       className={className}
       initial={{ opacity: 0, y: 14, scale: 0.995, filter: 'blur(8px)' }}
       animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
@@ -12,13 +14,13 @@ export function PageTransition({ children, className = '' }) {
       transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
-    </motion.div>
+    </MotionDiv>
   )
 }
 
 export function Reveal({ children, className = '', delay = 0 }) {
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 24, scale: 0.985, filter: 'blur(8px)' }}
       whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
       viewport={{ once: true, amount: 0.16, margin: '-36px' }}
@@ -26,7 +28,7 @@ export function Reveal({ children, className = '', delay = 0 }) {
       className={className}
     >
       {children}
-    </motion.div>
+    </MotionDiv>
   )
 }
 
@@ -54,7 +56,7 @@ export function TiltCard({ children, className = '' }) {
   }
 
   return (
-    <motion.div
+    <MotionDiv
       className={`tilt-card relative rounded-2xl border border-white/10 ${className}`}
       onMouseMove={handleMove}
       onMouseLeave={resetTilt}
@@ -64,32 +66,29 @@ export function TiltCard({ children, className = '' }) {
     >
       <div className="tilt-card-glare" />
       {children}
-    </motion.div>
+    </MotionDiv>
   )
 }
 
 export function RouteLoader() {
   const location = useLocation()
-  const [active, setActive] = useState(true)
-
-  useEffect(() => {
-    setActive(true)
-    const timeout = window.setTimeout(() => setActive(false), 780)
-    return () => window.clearTimeout(timeout)
-  }, [location.pathname, location.search])
+  const routeKey = `${location.pathname}${location.search}`
 
   return (
-    <div className={`route-loader-shell ${active ? 'route-loader-shell-active' : ''}`}>
-      <motion.div
+    <div className="route-loader-shell route-loader-shell-active">
+      <MotionDiv
+        key={`bar-${routeKey}`}
         className="route-loader-bar origin-left"
         initial={{ scaleX: 0 }}
-        animate={{ scaleX: active ? 1 : 0, opacity: active ? 1 : 0 }}
+        animate={{ scaleX: [0, 1, 1], opacity: [1, 1, 0] }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       />
-      <motion.div
+      <MotionDiv
+        key={`glow-${routeKey}`}
         className="route-loader-glow"
-        animate={active ? { x: ['-120%', '120%'], opacity: [0, 1, 0] } : { opacity: 0 }}
-        transition={{ duration: 0.9, ease: 'linear', repeat: active ? Infinity : 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ x: ['-120%', '120%'], opacity: [0, 1, 0] }}
+        transition={{ duration: 0.85, ease: 'linear' }}
       />
     </div>
   )
@@ -101,7 +100,7 @@ export function ScrollProgress() {
 
   return (
     <div className="scroll-progress-shell">
-      <motion.div className="scroll-progress-bar origin-left" style={{ scaleX }} />
+      <MotionDiv className="scroll-progress-bar origin-left" style={{ scaleX }} />
     </div>
   )
 }
@@ -118,15 +117,15 @@ export function ParallaxLayer({ children, className = '', speed = 8, axis = 'y' 
       : { y: offset }
 
   return (
-    <motion.div className={className} style={style}>
+    <MotionDiv className={className} style={style}>
       {children}
-    </motion.div>
+    </MotionDiv>
   )
 }
 
 export function CursorAura() {
   const reduceMotion = useReducedMotion()
-  const [enabled, setEnabled] = useState(false)
+  const [enabled, setEnabled] = useState(() => window.matchMedia('(pointer:fine)').matches)
   const [visible, setVisible] = useState(false)
   const [interactive, setInteractive] = useState(false)
   const [pressed, setPressed] = useState(false)
@@ -139,15 +138,12 @@ export function CursorAura() {
   const dotY = useSpring(y, { stiffness: 760, damping: 46, mass: 0.2 })
 
   useEffect(() => {
-    if (reduceMotion) return
-
     const mediaQuery = window.matchMedia('(pointer:fine)')
-    setEnabled(mediaQuery.matches)
     const onPointerCapabilityChange = () => setEnabled(mediaQuery.matches)
     mediaQuery.addEventListener('change', onPointerCapabilityChange)
 
     return () => mediaQuery.removeEventListener('change', onPointerCapabilityChange)
-  }, [reduceMotion])
+  }, [])
 
   useEffect(() => {
     if (!enabled) return
@@ -190,15 +186,15 @@ export function CursorAura() {
     }
   }, [enabled, x, y])
 
-  if (!enabled) return null
+  if (!enabled || reduceMotion) return null
 
   return (
     <div className={`cursor-aura-root ${visible ? 'is-visible' : ''}`}>
-      <motion.div
+      <MotionDiv
         className={`cursor-aura-ring ${interactive ? 'is-active' : ''} ${pressed ? 'is-pressed' : ''}`}
         style={{ x: ringX, y: ringY }}
       />
-      <motion.div className={`cursor-aura-dot ${interactive ? 'is-active' : ''}`} style={{ x: dotX, y: dotY }} />
+      <MotionDiv className={`cursor-aura-dot ${interactive ? 'is-active' : ''}`} style={{ x: dotX, y: dotY }} />
     </div>
   )
 }

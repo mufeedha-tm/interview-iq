@@ -5,7 +5,7 @@ import { getStoredUser } from '../lib/auth'
 import { changePassword } from '../services/authService'
 import { redirectToPremiumCheckout } from '../services/paymentService'
 import { Button, Panel, SectionIntro, ThemeToggle } from '../components/UI'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 function SettingsPage() {
   const { user: authUser } = useAuth()

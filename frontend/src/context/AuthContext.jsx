@@ -1,8 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCurrentUser, logoutUser as apiLogout } from '../services/authService'
 import { clearAuthSession, getStoredUser, storeAuthSession } from '../lib/auth'
-
-const AuthContext = createContext()
+import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStoredUser())
@@ -36,13 +35,13 @@ export function AuthProvider({ children }) {
     loadUser()
   }, [])
 
-  const loginContext = (userData) => {
+  const loginContext = useCallback((userData) => {
     setUser(userData)
     setIsAuthenticated(true)
     storeAuthSession({ user: userData })
-  }
+  }, [])
 
-  const logoutContext = async () => {
+  const logoutContext = useCallback(async () => {
     try {
       await apiLogout()
     } catch (err) {
@@ -52,24 +51,21 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(false)
       clearAuthSession()
     }
-  }
+  }, [])
 
-  const updateUserContext = (userData) => {
+  const updateUserContext = useCallback((userData) => {
     setUser(userData)
     storeAuthSession({ user: userData })
-  }
+  }, [])
+
+  const contextValue = useMemo(
+    () => ({ user, isAuthenticated, loading, loginContext, logoutContext, updateUserContext }),
+    [user, isAuthenticated, loading, loginContext, logoutContext, updateUserContext],
+  )
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, loginContext, logoutContext, updateUserContext }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
 }

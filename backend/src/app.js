@@ -51,8 +51,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use(helmet());
-// express-mongo-sanitize reassigns req.query internally, which breaks on Express 5
-// because req.query is exposed as a getter-only property.
 app.use((req, _res, next) => {
   if (req.originalUrl.startsWith("/api/payments/webhook")) {
     return next();
@@ -72,7 +70,6 @@ const limiter = rateLimit({
   message: "Too many requests originating from this IP, please try again after 15 minutes."
 });
 
-// Apply rate limiting to all /api routes
 app.use("/api", limiter);
 
 if (process.env.NODE_ENV === "development") {

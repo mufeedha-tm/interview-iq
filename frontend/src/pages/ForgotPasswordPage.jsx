@@ -29,8 +29,6 @@ function ForgotPasswordPage() {
           emailSent: data.emailSent,
           emailFallbackCode: data.emailFallbackCode || '',
           emailFallbackReason: data.emailFallbackReason || '',
-          developmentOtp: data.developmentOtp || '',
-          emailPreview: data.emailPreview || '',
         },
       })
     } catch (error) {

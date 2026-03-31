@@ -23,7 +23,7 @@ function ResultsPage() {
       try {
         const { interview: data } = await fetchInterview(interviewId)
         setInterview(data)
-      } catch (error) {
+      } catch {
         toast.error('Unable to load interview results.')
         navigate('/history')
       } finally {

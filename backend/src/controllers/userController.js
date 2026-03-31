@@ -56,8 +56,6 @@ const getUserById = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { role, isVerified, subscriptionTier, premiumInterviewsRemaining } = req.body;
-    
-    // Admins can update roles, verification, and subscription details
     const updates = {};
     if (role !== undefined) updates.role = role;
     if (isVerified !== undefined) updates.isVerified = isVerified;
@@ -85,11 +83,6 @@ const deleteUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
-    // Optionally delete related content like interviews:
-    // const Interview = require("../models/interviewModel");
-    // await Interview.deleteMany({ user: req.params.id });
-
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     next(error);

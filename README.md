@@ -76,16 +76,11 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
 
-EMAIL_HOST=smtp.example.com
-EMAIL_PORT=587
-EMAIL_USERNAME=<smtp_username>
-EMAIL_PASSWORD=<smtp_password>
-RESEND_API_KEY=<resend_api_key>
-RESEND_API_URL=https://api.resend.com/emails
+EMAIL_SERVICE=gmail
+EMAIL_USER=<your_email_address>
+EMAIL_PASS=<your_email_app_password>
 EMAIL_FROM=no-reply@example.com
 EMAIL_FROM_NAME=InterviewIQ
-# optional aliases supported:
-# EMAIL_USER / EMAIL_PASS
 
 CLOUDINARY_CLOUD_NAME=<cloud_name>
 CLOUDINARY_API_KEY=<api_key>
@@ -96,11 +91,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note:
-- The app sends mail with Nodemailer over SMTP.
-- In development, if SMTP values are missing, the app falls back to a Nodemailer test mailbox.
-- In production, configure SMTP with `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME` (or `EMAIL_USER`), and `EMAIL_PASSWORD` (or `EMAIL_PASS`).
-- You can set `RESEND_API_KEY` to deliver mail via Resend HTTPS API (recommended for Render free tier where SMTP ports can be restricted).
-- `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when SMTP is slow.
+- The app sends mail with Nodemailer using your email account credentials.
+- Configure `EMAIL_SERVICE`, `EMAIL_USER`, and `EMAIL_PASS` for both development and production.
+- If `EMAIL_SERVICE=gmail`, set `EMAIL_FROM` to the same Gmail address as `EMAIL_USER`.
+- `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when email delivery is slow.
 - `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
 - If you use MongoDB Atlas, whitelist your current IP in Atlas Network Access or the backend cannot start.
 
@@ -161,12 +155,9 @@ JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USERNAME=<your_gmail_address>
-EMAIL_PASSWORD=<your_gmail_app_password>
-RESEND_API_KEY=<your_resend_api_key>
-RESEND_API_URL=https://api.resend.com/emails
+EMAIL_SERVICE=gmail
+EMAIL_USER=<your_gmail_address>
+EMAIL_PASS=<your_gmail_app_password>
 EMAIL_FROM=no-reply@<your-domain>
 EMAIL_FROM_NAME=InterviewIQ
 CLOUDINARY_CLOUD_NAME=<cloud_name>
@@ -223,12 +214,12 @@ Deployment checklist:
 
 | Requirement | Status |
 |---|---|
-| Frontend Hosted | Done (`https://interview-iq-ruddy-one.vercel.app`) |
-| Backend Hosted | Done (`https://interviewiq-backend-lzdm.onrender.com`) |
-| MongoDB Atlas Connected | Pending (add proof/link) |
+| Frontend Hosted | Done (`https://interview-iq-ruddy-one.vercel.app`, verified reachable on March 31, 2026) |
+| Backend Hosted | Done (`https://interviewiq-backend-lzdm.onrender.com`, `/health` verified on March 31, 2026) |
+| MongoDB Atlas Connected | In use (configured via `MONGODB_URI`; attach Atlas proof screenshot/link in submission) |
 | GitHub Repo Link | Done (`https://github.com/mufeedha-tm/interview-iq`) |
-| README with Screenshots | Pending (add screenshots below) |
-| Demo Video (2-3 min) | Pending (add link below) |
+| README with Screenshots | Pending (add screenshot image files in `docs/screenshots/`) |
+| Demo Video (2-3 min) | Pending (add demo video link below) |
 
 ### Bonus
 
@@ -239,7 +230,13 @@ Deployment checklist:
 | Dark Mode | Done |
 | Export Reports | Done (PDF + CSV + JSON) |
 
-## 9) Screenshots
+## 9) Build & Lint Verification
+
+- Frontend lint: `npm run lint` -> pass
+- Frontend production build: `npm run build` -> pass
+- Verification date: March 31, 2026
+
+## 10) Screenshots
 
 Add your screenshots here:
 
@@ -250,7 +247,7 @@ Add your screenshots here:
 ![Results + Export](./docs/screenshots/results.png)
 ```
 
-## 10) Demo Video
+## 11) Demo Video
 
 Add your demo video link:
 

@@ -1,103 +1,49 @@
 const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
+const { ApiError } = require("./apiError");
 
 const getFromAddress = () => {
-  const fromEmail = email.fromEmail || email.user || "no-reply@interviewiq.app";
+  const service = String(email.service || "").toLowerCase();
+  const fromEmail =
+    service === "gmail"
+      ? email.user || email.fromEmail || "no-reply@interviewiq.app"
+      : email.fromEmail || email.user || "no-reply@interviewiq.app";
 
   return `${email.fromName || "InterviewIQ"} <${fromEmail}>`;
 };
 
-const createTestTransporter = async () => {
-  const testAccount = await nodemailer.createTestAccount();
+const getMissingEmailFields = () => {
+  const missing = [];
+
+  if (!email.service) {
+    missing.push("EMAIL_SERVICE");
+  }
+  if (!email.user) {
+    missing.push("EMAIL_USER");
+  }
+  if (!email.pass) {
+    missing.push("EMAIL_PASS");
+  }
+
+  return missing;
+};
+
+const createEmailTransporter = () => {
+  const missingFields = getMissingEmailFields();
+  if (missingFields.length > 0) {
+    throw new ApiError(`Email config missing: ${missingFields.join(", ")}`, 500);
+  }
+
   return nodemailer.createTransport({
-    host: testAccount.smtp.host,
-    port: testAccount.smtp.port,
-    secure: testAccount.smtp.secure,
+    service: email.service,
     auth: {
-      user: testAccount.user,
-      pass: testAccount.pass,
+      user: email.user,
+      pass: email.pass,
     },
   });
 };
 
-const createSmtpTransporter = async () => {
-  const missingHostOrPort = !email.host || !email.port;
-  const missingCredentials = !email.user || !email.pass;
-
-  if (missingHostOrPort || missingCredentials) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error(
-        "SMTP is required in production. Set EMAIL_HOST, EMAIL_PORT, EMAIL_USERNAME (or EMAIL_USER), and EMAIL_PASSWORD (or EMAIL_PASS).",
-      );
-    }
-
-    const missingFields = [
-      !email.host ? "EMAIL_HOST" : null,
-      !email.port ? "EMAIL_PORT" : null,
-      !email.user ? "EMAIL_USERNAME/EMAIL_USER" : null,
-      !email.pass ? "EMAIL_PASSWORD/EMAIL_PASS" : null,
-    ].filter(Boolean);
-
-    return {
-      transporter: await createTestTransporter(),
-      deliveredVia: "ethereal",
-      fallbackReason: `SMTP config missing: ${missingFields.join(", ")}`,
-    };
-  }
-
-  return {
-    transporter: nodemailer.createTransport({
-      host: email.host,
-      port: Number(email.port),
-      secure: Number(email.port) === 465,
-      auth: {
-        user: email.user,
-        pass: email.pass,
-      },
-    }),
-    deliveredVia: "smtp",
-  };
-};
-
-const sendViaResendApi = async ({ to, subject, html, text }) => {
-  if (!email.resendApiKey) {
-    throw new Error("RESEND_API_KEY is missing");
-  }
-
-  const response = await fetch(email.resendApiUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${email.resendApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: getFromAddress(),
-      to: [to],
-      subject,
-      html,
-      text,
-    }),
-  });
-
-  const body = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const errorMessage =
-      body?.message ||
-      body?.error ||
-      body?.errors?.[0]?.message ||
-      `Resend API request failed with status ${response.status}`;
-    throw new Error(errorMessage);
-  }
-
-  return {
-    messageId: body?.id,
-    previewUrl: null,
-    deliveredVia: "resend_api",
-  };
-};
-
-const sendViaSmtp = async ({ to, subject, html, text }) => {
+const sendEmail = async ({ to, subject, html, text }) => {
   const payload = {
     from: getFromAddress(),
     to,
@@ -106,52 +52,13 @@ const sendViaSmtp = async ({ to, subject, html, text }) => {
     text,
   };
 
-  const { transporter, deliveredVia, fallbackReason } = await createSmtpTransporter();
-  const defaultFallbackReason = deliveredVia === "ethereal" ? fallbackReason || "SMTP delivery not active." : null;
+  const transporter = createEmailTransporter();
+  const info = await transporter.sendMail(payload);
 
-  try {
-    const info = await transporter.sendMail(payload);
-    return {
-      messageId: info.messageId,
-      previewUrl: nodemailer.getTestMessageUrl(info),
-      deliveredVia,
-      fallbackReason: defaultFallbackReason || undefined,
-    };
-  } catch (primaryError) {
-    if (process.env.NODE_ENV === "production" || deliveredVia === "ethereal") {
-      throw primaryError;
-    }
-
-    const fallbackTransporter = await createTestTransporter();
-    const fallbackInfo = await fallbackTransporter.sendMail(payload);
-
-    return {
-      messageId: fallbackInfo.messageId,
-      previewUrl: nodemailer.getTestMessageUrl(fallbackInfo),
-      deliveredVia: "ethereal",
-      fallbackReason: primaryError.message,
-    };
-  }
-};
-
-const sendEmail = async ({ to, subject, html, text }) => {
-  if (email.resendApiKey) {
-    try {
-      return await sendViaResendApi({ to, subject, html, text });
-    } catch (resendError) {
-      if (process.env.NODE_ENV === "production") {
-        throw resendError;
-      }
-
-      const smtpResult = await sendViaSmtp({ to, subject, html, text });
-      return {
-        ...smtpResult,
-        fallbackReason: resendError.message,
-      };
-    }
-  }
-
-  return sendViaSmtp({ to, subject, html, text });
+  return {
+    messageId: info.messageId,
+    deliveredVia: "email",
+  };
 };
 
 const sendInterviewSummaryEmail = async (user, interview) => {

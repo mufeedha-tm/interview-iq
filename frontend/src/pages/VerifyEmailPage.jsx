@@ -9,21 +9,19 @@ function VerifyEmailPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     email: location.state?.email || '',
-    otp: location.state?.developmentOtp || '',
+    otp: '',
   })
   const [emailSent, setEmailSent] = useState(Boolean(location.state?.emailSent))
   const [emailFallbackCode, setEmailFallbackCode] = useState(location.state?.emailFallbackCode || '')
   const [emailFallbackReason, setEmailFallbackReason] = useState(location.state?.emailFallbackReason || '')
-  const [emailPreview, setEmailPreview] = useState(location.state?.emailPreview || '')
-  const [developmentOtp, setDevelopmentOtp] = useState(location.state?.developmentOtp || '')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
 
   const emailFallbackHelp = {
-    timeout: 'The backend reached SMTP, but the mail request timed out.',
-    auth_failed: 'SMTP rejected the login. Recheck the mail username or app password.',
-    config_missing: 'SMTP environment variables are missing on the backend.',
-    connection_failed: 'The backend could not connect to the mail server.',
+    timeout: 'The backend reached the email provider, but the request timed out.',
+    auth_failed: 'Email login failed. Recheck EMAIL_USER and EMAIL_PASS.',
+    config_missing: 'Email environment variables are missing on the backend.',
+    connection_failed: 'The backend could not connect to the email provider.',
     delivery_failed: 'The mail provider rejected or failed the delivery request.',
   }
 
@@ -83,12 +81,6 @@ function VerifyEmailPage() {
       setEmailSent(Boolean(data.emailSent))
       setEmailFallbackCode(data.emailFallbackCode || '')
       setEmailFallbackReason(data.emailFallbackReason || '')
-      setEmailPreview(data.emailPreview || '')
-      setDevelopmentOtp(data.developmentOtp || '')
-      setForm((current) => ({
-        ...current,
-        otp: data.developmentOtp || current.otp,
-      }))
       toast.success(data.message || 'A new OTP has been sent.')
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to resend the OTP.')
@@ -107,32 +99,14 @@ function VerifyEmailPage() {
             Signup now sends a real request to <code>/api/auth/signup</code>, and this step verifies
             <code> /api/auth/verify-email</code>.
           </p>
-          {emailPreview ? (
-            <a
-              className="inline-flex text-sm font-medium text-coral-500 underline"
-              href={emailPreview}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open email preview
-            </a>
-          ) : null}
-          {developmentOtp && !emailSent ? (
-            <div className="rounded-3xl border border-coral-200 bg-coral-50 p-4 text-sm text-coral-700">
-              <p className="font-semibold">Development OTP</p>
-              <p className="mt-1">
-                Use this code for local testing: <span className="font-bold">{developmentOtp}</span>
-              </p>
-            </div>
-          ) : null}
           <div
             className={`rounded-3xl border p-4 text-sm ${
               emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'
             }`}
           >
-            <p className="font-semibold">{emailSent ? 'Email delivery: Sent to inbox' : 'Email delivery: Preview mode'}</p>
+            <p className="font-semibold">{emailSent ? 'Email delivery: Sent to inbox' : 'Email delivery: Failed'}</p>
             <p className="mt-1">
-              {emailSent ? 'OTP mail is sent to your inbox.' : 'Use local preview/development OTP while SMTP is not delivering.'}
+              {emailSent ? 'OTP mail is sent to your inbox.' : 'Unable to deliver OTP email right now. Please try resending.'}
             </p>
             {!emailSent && emailFallbackCode ? (
               <p className="mt-2 text-xs">

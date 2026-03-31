@@ -1,7 +1,7 @@
 const USER_KEY = 'interviewiq_user';
 
 export function getStoredToken() {
-  return null; // Token is now managed securely via HttpOnly cookies
+  return null; 
 }
 
 export function getStoredUser() {

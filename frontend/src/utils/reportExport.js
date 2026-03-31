@@ -1,8 +1,4 @@
-/**
- * Simplifies PDF exporting by utilizing the native browser print engine.
- * Requires `print:hidden` CSS classes on components that should be omitted from the PDF structure.
- * This completely avoids the massive overhead and UI breaking formatting of html2canvas/jsPDF.
- */
+
 export function exportInterviewReportPdf() {
   window.print();
 }
@@ -27,9 +23,6 @@ function triggerDownload(filename, content, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-/**
- * Exports interview report data as CSV, which opens directly in Excel.
- */
 export function exportInterviewReportExcel(interviewData) {
   if (!interviewData) return;
 
@@ -73,9 +66,6 @@ export function exportInterviewReportExcel(interviewData) {
   triggerDownload(`interviewiq-report-${Date.now()}.csv`, csvContent, 'text/csv;charset=utf-8;');
 }
 
-/**
- * Extracts frontend React states into a clean JSON Blob export.
- */
 export function exportInterviewReportJson(reportData) {
   if (!reportData) return;
   const jsonString = JSON.stringify(reportData, null, 2);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 import { Button, Panel, SectionIntro } from '../components/UI'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { getCurrentUser, updateProfile, uploadAvatar } from '../services/authService'
 import { JOB_ROLES } from '../data/jobRoles'
 
@@ -23,15 +23,16 @@ function ProfilePage() {
   const [errors, setErrors] = useState({})
 
   useEffect(() => {
+    if (!globalUser) return
+    setForm((current) => ({
+      ...current,
+      ...globalUser,
+    }))
+  }, [globalUser])
+
+  useEffect(() => {
     async function loadUser() {
       try {
-        if (globalUser) {
-          setForm((current) => ({
-            ...current,
-            ...globalUser,
-          }))
-        }
-
         const { user } = await getCurrentUser()
         updateUserContext(user)
         setForm((current) => ({
@@ -46,7 +47,7 @@ function ProfilePage() {
     }
 
     loadUser()
-  }, [])
+  }, [updateUserContext])
 
   function handleChange(event) {
     const { name, value } = event.target

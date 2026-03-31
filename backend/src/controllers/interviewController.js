@@ -182,8 +182,6 @@ const buildInterviewQuery = async (req) => {
   const { role, startDate, endDate, minScore, maxScore, difficulty, q, status, category } = req.query;
 
   const query = {};
-
-  // Only admins can filter by role; normal users see their own interviews.
   if (req.user.role === "admin" && role) {
     const users = await User.find({ role }).select("_id");
     const userIds = users.map((u) => u._id);

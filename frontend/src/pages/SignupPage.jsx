@@ -27,28 +27,20 @@ function SignupPage() {
   })
 
   const emailFallbackHelp = {
-    timeout: 'The backend reached SMTP, but the mail request timed out.',
-    auth_failed: 'SMTP rejected the login. Recheck the mail username or app password.',
-    config_missing: 'SMTP environment variables are missing on the backend.',
-    connection_failed: 'The backend could not connect to the mail server.',
+    timeout: 'The backend reached the email provider, but the request timed out.',
+    auth_failed: 'Email login failed. Recheck EMAIL_USER and EMAIL_PASS.',
+    config_missing: 'Email environment variables are missing on the backend.',
+    connection_failed: 'The backend could not connect to the email provider.',
     delivery_failed: 'The mail provider rejected or failed the delivery request.',
   }
 
   const emailStatusTitle = signupResult?.emailSent
     ? 'Email delivery: Sent to inbox'
-    : signupResult?.emailPreview
-      ? 'Email delivery: Preview available'
-      : signupResult?.developmentOtp
-        ? 'Email delivery: Development OTP'
-        : 'Email delivery: Unavailable'
+    : 'Email delivery: Failed'
 
   const emailStatusMessage = signupResult?.emailSent
     ? 'OTP has been sent to your mailbox.'
-    : signupResult?.emailPreview
-      ? 'SMTP is not delivering to inbox right now. Open the preview link below to get the OTP.'
-      : signupResult?.developmentOtp
-        ? 'SMTP is not delivering to inbox right now. Use the development OTP shown below.'
-        : 'SMTP delivery failed, and no preview OTP is available from the backend right now.'
+    : 'Unable to deliver OTP email right now. Please try resending.'
 
   function validateForm() {
     const nextErrors = {}
@@ -118,15 +110,13 @@ function SignupPage() {
 
       toast.success(data.message || 'Account created. Verify your email to continue.')
       setSignupResult({
-        emailPreview: data.emailPreview || '',
         emailSent: data.emailSent,
         emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
-        developmentOtp: data.developmentOtp || '',
       })
       setOtpForm({
         email: form.email.trim(),
-        otp: data.developmentOtp || '',
+        otp: '',
       })
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to create your account right now.')
@@ -190,15 +180,9 @@ function SignupPage() {
       const data = await resendOtp(otpForm.email.trim())
       setSignupResult((current) => ({
         ...current,
-        emailPreview: data.emailPreview || '',
         emailSent: data.emailSent,
         emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
-        developmentOtp: data.developmentOtp || '',
-      }))
-      setOtpForm((current) => ({
-        ...current,
-        otp: data.developmentOtp || current.otp,
       }))
       toast.success(data.message || 'OTP sent again.')
     } catch (error) {
@@ -330,24 +314,6 @@ function SignupPage() {
                 </p>
               ) : null}
             </div>
-
-            {signupResult.emailPreview ? (
-              <a
-                className="inline-flex text-sm font-medium text-coral-500 underline"
-                href={signupResult.emailPreview}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open email preview
-              </a>
-            ) : null}
-
-            {signupResult.developmentOtp && !signupResult.emailSent ? (
-              <div className="rounded-3xl border border-coral-200 bg-coral-50 p-4 text-sm text-coral-700">
-                <p className="font-semibold">Development OTP</p>
-                <p className="mt-1">Use this code for local testing: <span className="font-bold">{signupResult.developmentOtp}</span></p>
-              </div>
-            ) : null}
 
             <div className="space-y-2">
               <input
