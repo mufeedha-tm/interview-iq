@@ -16,7 +16,7 @@ function ResumeAnalyzerPage() {
         if (data.resumeUrl) setResumeUrl(data.resumeUrl)
         if (data.evaluation) setAiEvaluation(data.evaluation)
       } catch {
-        // First-time users may not have a resume yet.
+        setAiEvaluation(null)
       }
     }
 

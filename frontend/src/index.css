@@ -93,6 +93,47 @@
 
   .section-title {
     @apply font-display text-2xl font-semibold tracking-tight text-ink-950 md:text-3xl dark:text-white;
+    position: relative;
+    display: inline-block;
+    background-image: linear-gradient(110deg, #07111f 0%, #223b59 42%, #ff6b57 62%, #07111f 100%);
+    background-size: 240% 240%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation:
+      premium-text-reveal 0.75s cubic-bezier(.22,1,.36,1) both,
+      premium-text-gradient 9.5s ease-in-out infinite;
+  }
+
+  .dark .section-title {
+    background-image: linear-gradient(110deg, #ffffff 0%, #d7e8ff 40%, #8cc9ff 64%, #ffffff 100%);
+  }
+
+  .section-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -0.3rem;
+    width: 3.25rem;
+    height: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(255, 107, 87, 0.95), rgba(255, 209, 102, 0.9), rgba(140, 201, 255, 0.9));
+    animation: premium-line-pulse 3.4s ease-in-out infinite;
+  }
+
+  .dashboard-band h2.font-display {
+    background-image: linear-gradient(115deg, #07111f 0%, #223b59 45%, #ff6b57 70%, #07111f 100%);
+    background-size: 220% 220%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: premium-text-gradient 10s ease-in-out infinite;
+  }
+
+  .dark .dashboard-band h2.font-display {
+    background-image: linear-gradient(115deg, #ffffff 0%, #d5e7ff 44%, #8cc9ff 72%, #ffffff 100%);
   }
 
   .section-copy {
@@ -501,9 +542,49 @@
   }
 }
 
+@keyframes premium-text-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes premium-text-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes premium-line-pulse {
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: translateX(0) scaleX(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(3px) scaleX(1.04);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .premium-btn::after,
-  .floating-line::after {
+  .floating-line::after,
+  .section-title,
+  .section-title::after,
+  .dashboard-band h2.font-display {
     animation: none !important;
     transition: none !important;
   }

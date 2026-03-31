@@ -9,7 +9,7 @@ import { createInterview, fetchInterviewRoles, generateInterviewEngine } from '.
 import { confirmPremiumCheckout, fetchPaymentPlans, redirectToPremiumCheckout } from '../services/paymentService'
 import { focusTracks, premiumPlans } from '../data/mockData'
 import { getStoredUser, storeAuthSession } from '../lib/auth'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 
 const launchSteps = [
   'We generate fresh questions based on your role, level, and skills.',
@@ -87,7 +87,6 @@ function StartInterviewPage() {
           })
         }
       } catch {
-        // Fallback to local list for offline / dev.
         setRoles([])
       }
     }
@@ -108,7 +107,7 @@ function StartInterviewPage() {
           )
         }
       } catch {
-        // Keep the local fallback plan list.
+        setPlans(premiumPlans)
       }
     }
 
@@ -150,7 +149,7 @@ function StartInterviewPage() {
     }
 
     confirmPayment()
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, updateUserContext])
 
   function handleChange(event) {
     const { name, value } = event.target

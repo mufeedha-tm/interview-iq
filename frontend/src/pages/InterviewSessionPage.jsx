@@ -74,7 +74,7 @@ function InterviewSessionPage() {
     mode: 'audio',
     recordedBlob: null,
   })
-  const [timeLeft, setTimeLeft] = useState(180) // 3 mins per question
+  const [timeLeft, setTimeLeft] = useState(180) 
   const mediaRecorderRef = useRef(null)
   const mediaStreamRef = useRef(null)
   const timerRef = useRef(null)
@@ -177,7 +177,6 @@ function InterviewSessionPage() {
         answers: [{ question: currentQuestion, answer: normalizedAnswerToSave }],
       })
 
-      // Upload Recorded Media immediately after text answers
       if (recorderState.recordedBlob) {
         toast.info('Uploading media recording...')
         try {
@@ -189,7 +188,6 @@ function InterviewSessionPage() {
 
       setRecorderState((current) => ({ ...current, previewUrl: '', recordedBlob: null }))
 
-      // Dynamic Generation logic (on final static questions)
       if (currentIndex >= 1 && currentIndex < updatedInterview.questions.length - 1) {
         toast.info('AI is generating the next adaptive question...', { autoClose: 2000 })
         const { nextQuestion } = await requestNextQuestion(interviewId, {
@@ -237,8 +235,6 @@ function InterviewSessionPage() {
       })
 
       const evaluations = []
-      
-      // Parallelize single question evaluations for local scores
       await Promise.all(
         latestQuestions.map(async (question, index) => {
           const answerText = String(answers[index] || '').trim() || '(No answer provided within time limit)'
