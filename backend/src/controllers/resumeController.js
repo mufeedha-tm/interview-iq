@@ -12,6 +12,36 @@ const hasCloudinaryConfig = () =>
       process.env.CLOUDINARY_API_SECRET
   );
 
+const getPublicBaseUrl = (req) => {
+  const forwardedProto = req.get("x-forwarded-proto");
+  const protocol = forwardedProto ? forwardedProto.split(",")[0].trim() : req.protocol;
+  return `${protocol}://${req.get("host")}`;
+};
+
+const normalizeResumeUrl = (req, resumeUrl) => {
+  if (!resumeUrl) {
+    return resumeUrl;
+  }
+
+  const uploadsPrefix = "/uploads/";
+
+  if (resumeUrl.startsWith(uploadsPrefix)) {
+    return `${getPublicBaseUrl(req)}${resumeUrl}`;
+  }
+
+  try {
+    const parsedUrl = new URL(resumeUrl);
+    if (parsedUrl.host === req.get("host") && parsedUrl.pathname.startsWith(uploadsPrefix)) {
+      parsedUrl.protocol = `${getPublicBaseUrl(req).split("://")[0]}:`;
+      return parsedUrl.toString();
+    }
+  } catch {
+    return resumeUrl;
+  }
+
+  return resumeUrl;
+};
+
 const saveResumeLocally = async ({ req, buffer, originalname, userId }) => {
   const uploadsDir = path.join(__dirname, "..", "..", "uploads", "resumes");
   await fs.mkdir(uploadsDir, { recursive: true });
@@ -22,7 +52,7 @@ const saveResumeLocally = async ({ req, buffer, originalname, userId }) => {
   await fs.writeFile(filePath, buffer);
 
   return {
-    resumeUrl: `${req.protocol}://${req.get("host")}/uploads/resumes/${fileName}`,
+    resumeUrl: `${getPublicBaseUrl(req)}/uploads/resumes/${fileName}`,
   };
 };
 
@@ -110,8 +140,14 @@ const getResume = async (req, res, next) => {
       });
     }
 
+    const normalizedResumeUrl = normalizeResumeUrl(req, req.user.resumeUrl);
+    if (normalizedResumeUrl !== req.user.resumeUrl) {
+      req.user.resumeUrl = normalizedResumeUrl;
+      await req.user.save({ validateBeforeSave: false });
+    }
+
     res.status(200).json({ 
-      resumeUrl: req.user.resumeUrl,
+      resumeUrl: normalizedResumeUrl,
       evaluation: req.user.resumeEvaluation 
     });
   } catch (error) {
