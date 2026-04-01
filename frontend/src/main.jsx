@@ -14,7 +14,7 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <AuthProvider>
           <App />
-          <ToastContainer position="top-right" autoClose={3000} newestOnTop theme="colored" />
+          <ToastContainer position="top-right" autoClose={3000} newestOnTop theme="colored" toastClassName="toast-shell" />
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

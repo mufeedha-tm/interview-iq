@@ -193,12 +193,12 @@ function SignupPage() {
   }
 
   return (
-    <section className="soft-panel flex items-center p-6 md:p-8">
-      <div className="w-full space-y-6">
-        <div className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Create workspace</p>
-          <h1 className="font-display text-3xl font-semibold text-ink-950 dark:text-white">Start your InterviewIQ account</h1>
-          <p className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+    <section className="form-shell flex items-center">
+      <div className="form-content w-full space-y-6">
+        <div className="form-heading">
+          <p className="form-kicker">Create workspace</p>
+          <h1 className="form-title">Start your InterviewIQ account</h1>
+          <p className="form-copy">
             Create your account, then verify the OTP to activate login access.
           </p>
         </div>
@@ -206,8 +206,10 @@ function SignupPage() {
         {!signupResult ? (
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="form-group">
+                <label className="form-label" htmlFor="signup-first-name">First name</label>
                 <input
+                  id="signup-first-name"
                   className="input-field"
                   name="firstName"
                   value={form.firstName}
@@ -218,8 +220,10 @@ function SignupPage() {
                 />
                 {errors.firstName ? <p className="text-sm text-red-500">{errors.firstName}</p> : null}
               </div>
-              <div className="space-y-2">
+              <div className="form-group">
+                <label className="form-label" htmlFor="signup-last-name">Last name</label>
                 <input
+                  id="signup-last-name"
                   className="input-field"
                   name="lastName"
                   value={form.lastName}
@@ -231,8 +235,10 @@ function SignupPage() {
                 {errors.lastName ? <p className="text-sm text-red-500">{errors.lastName}</p> : null}
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-email">Email</label>
               <input
+                id="signup-email"
                 className="input-field"
                 type="email"
                 name="email"
@@ -244,9 +250,11 @@ function SignupPage() {
               />
               {errors.email ? <p className="text-sm text-red-500">{errors.email}</p> : null}
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center rounded-[28px] border border-ink-200 bg-white px-4 py-1 dark:border-white/10 dark:bg-ink-800">
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-password">Password</label>
+              <div className="input-shell">
                 <input
+                  id="signup-password"
                   className="w-full bg-transparent py-4 text-ink-950 outline-none dark:text-white"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
@@ -259,7 +267,7 @@ function SignupPage() {
                 />
                 <button
                   type="button"
-                  className="text-ink-400 transition hover:text-ink-700 dark:text-ink-300 dark:hover:text-white"
+                  className="input-icon-button shrink-0"
                   onClick={() => setShowPassword((current) => !current)}
                 >
                   <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
@@ -268,19 +276,23 @@ function SignupPage() {
               {errors.password ? <p className="text-sm text-red-500">{errors.password}</p> : null}
             </div>
 
-            <select
-              className={`input-field ${errors.targetRole ? 'border-red-500' : ''}`}
-              name="targetRole"
-              value={form.targetRole}
-              onChange={handleChange}
-            >
-              {JOB_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-            {errors.targetRole ? <p className="text-sm text-red-500">{errors.targetRole}</p> : null}
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-role">Target role</label>
+              <select
+                id="signup-role"
+                className={`input-field ${errors.targetRole ? 'border-red-500' : ''}`}
+                name="targetRole"
+                value={form.targetRole}
+                onChange={handleChange}
+              >
+                {JOB_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+              {errors.targetRole ? <p className="text-sm text-red-500">{errors.targetRole}</p> : null}
+            </div>
 
             <Button type="submit" variant="accent" className="w-full" disabled={loading}>
               {loading ? 'Creating account...' : 'Create account'}
@@ -288,16 +300,16 @@ function SignupPage() {
           </form>
         ) : (
           <form className="space-y-5" onSubmit={handleVerifyOtp}>
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <div className="status-banner status-banner-success">
               <p className="font-semibold">Account created successfully.</p>
               <p className="mt-1">Verify your email now to finish signup.</p>
             </div>
 
             <div
-              className={`rounded-3xl border p-4 text-sm ${
+              className={`status-banner ${
                 signupResult.emailSent
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                  : 'border-amber-200 bg-amber-50 text-amber-800'
+                  ? 'status-banner-success'
+                  : 'status-banner-warning'
               }`}
             >
               <p className="font-semibold">{emailStatusTitle}</p>
@@ -315,8 +327,10 @@ function SignupPage() {
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-otp-email">Email</label>
               <input
+                id="signup-otp-email"
                 className="input-field"
                 type="email"
                 name="email"
@@ -327,8 +341,10 @@ function SignupPage() {
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="signup-otp-code">OTP code</label>
               <input
+                id="signup-otp-code"
                 className="input-field"
                 type="text"
                 name="otp"
@@ -366,7 +382,7 @@ function SignupPage() {
 
         <p className="text-center text-sm text-ink-500 dark:text-ink-300">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-ink-950 dark:text-white">
+          <Link to="/login" className="font-semibold text-ink-950 transition hover:text-coral-500 dark:text-white dark:hover:text-sky-300">
             Log in
           </Link>
         </p>

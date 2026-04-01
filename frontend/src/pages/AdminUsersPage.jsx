@@ -105,12 +105,12 @@ function AdminUsersPage() {
       </Panel>
 
       <Panel title="User Accounts" copy="Click edit to modify user roles and subscriptions.">
-        {loading ? <p className="text-sm text-ink-500">Loading users...</p> : null}
-        {!loading && users.length === 0 ? <p className="text-sm text-ink-500">No users found.</p> : null}
+        {loading ? <div className="loading-shell text-sm text-ink-500">Loading users...</div> : null}
+        {!loading && users.length === 0 ? <div className="empty-state">No users found.</div> : null}
 
         <div className="space-y-4">
           {users.map((usr) => (
-            <div key={usr._id} className="rounded-[28px] border border-ink-100 bg-white p-5 dark:border-white/8 dark:bg-white/4">
+            <div key={usr._id} className="surface-tile p-5">
               {editingId === usr._id ? (
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-3">
@@ -158,13 +158,13 @@ function AdminUsersPage() {
                     <p className="text-sm text-ink-500 dark:text-ink-300">{usr.email}</p>
                   </div>
                   <div className="flex flex-wrap gap-2 items-center">
-                    <span className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-700 uppercase">
+                    <span className="status-chip status-chip-neutral uppercase">
                       {usr.role || 'user'}
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${usr.subscriptionTier === 'premium' ? 'bg-coral-50 text-coral-600' : 'bg-ink-100 text-ink-700'}`}>
+                    <span className={`status-chip ${usr.subscriptionTier === 'premium' ? 'status-chip-danger' : 'status-chip-neutral'}`}>
                       {usr.subscriptionTier || 'free'}
                     </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${usr.isVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                    <span className={`status-chip ${usr.isVerified ? 'status-chip-success' : 'status-chip-danger'}`}>
                       {usr.isVerified ? 'Verified' : 'Unverified'}
                     </span>
                     <div className="ml-4 flex gap-2">

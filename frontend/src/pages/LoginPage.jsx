@@ -79,19 +79,21 @@ function LoginPage() {
   }
 
   return (
-    <section className="soft-panel flex items-center p-6 md:p-8">
-      <form className="w-full space-y-6" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Sign in</p>
-          <h1 className="font-display text-3xl font-semibold text-ink-950 dark:text-white">Continue your interview preparation</h1>
-          <p className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+    <section className="form-shell flex items-center">
+      <form className="form-content w-full space-y-6" onSubmit={handleSubmit}>
+        <div className="form-heading">
+          <p className="form-kicker">Sign in</p>
+          <h1 className="form-title">Continue your interview preparation</h1>
+          <p className="form-copy">
             Log in to view saved sessions, continue interviews, update your profile, and download reports.
           </p>
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-1">
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-email">Email</label>
             <input
+              id="login-email"
               className={`input-field ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}`}
               type="email"
               name="email"
@@ -104,30 +106,34 @@ function LoginPage() {
             {errors.email ? <p className="text-xs text-red-500">{errors.email}</p> : null}
           </div>
 
-          <div className="flex items-center rounded-[28px] border border-ink-200 bg-white px-4 py-1 dark:border-white/10 dark:bg-ink-800">
-            <div className="w-full">
-              <input
-                className={`w-full bg-transparent py-4 text-ink-950 outline-none dark:text-white ${errors.password ? 'border-b border-red-500' : ''}`}
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Password"
-                autoComplete="current-password"
-                aria-invalid={Boolean(errors.password)}
-              />
-              {errors.password ? <p className="mt-1 text-xs text-red-500">{errors.password}</p> : null}
+          <div className="form-group">
+            <label className="form-label" htmlFor="login-password">Password</label>
+            <div className="input-shell">
+              <div className="w-full">
+                <input
+                  id="login-password"
+                  className={`w-full bg-transparent py-4 text-ink-950 outline-none dark:text-white ${errors.password ? 'border-b border-red-500' : ''}`}
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(errors.password)}
+                />
+                {errors.password ? <p className="mt-1 text-xs text-red-500">{errors.password}</p> : null}
+              </div>
+              <button
+                type="button"
+                className="input-icon-button shrink-0"
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              type="button"
-              className="text-ink-400 transition hover:text-ink-700 dark:text-ink-300 dark:hover:text-white"
-              onClick={() => setShowPassword((current) => !current)}
-            >
-              <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
-            </button>
           </div>
           <div className="flex justify-end">
-            <Link to="/forgot-password" className="text-sm font-semibold text-ink-950 dark:text-white transition hover:text-ink-700">
+            <Link to="/forgot-password" className="text-sm font-semibold text-ink-950 transition hover:text-coral-500 dark:text-white dark:hover:text-sky-300">
               Forgot password?
             </Link>
           </div>
@@ -139,7 +145,7 @@ function LoginPage() {
 
         <p className="text-center text-sm text-ink-500 dark:text-ink-300">
           New here?{' '}
-          <Link to="/signup" className="font-semibold text-ink-950 dark:text-white">
+          <Link to="/signup" className="font-semibold text-ink-950 transition hover:text-coral-500 dark:text-white dark:hover:text-sky-300">
             Create an account
           </Link>
         </p>

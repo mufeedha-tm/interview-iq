@@ -352,7 +352,7 @@ function InterviewSessionPage() {
   }
 
   if (loading) {
-    return <p className="text-sm text-ink-500">Loading interview session...</p>
+    return <div className="loading-shell text-sm text-ink-500">Loading interview session...</div>
   }
 
   if (!interview) {
@@ -371,7 +371,7 @@ function InterviewSessionPage() {
               {answeredCount} of {questions.length} answered
             </div>
             <div className={`rounded-full px-4 py-2 text-sm font-bold ${timeLeft <= 30 ? 'bg-red-500/10 text-red-500 animate-pulse' : 'bg-ink-100 text-ink-950 dark:bg-white/10 dark:text-white'}`}>
-              ⏱ {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              Timer {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
             </div>
           </div>
         }
@@ -445,7 +445,7 @@ function InterviewSessionPage() {
                 {liveCues.map((item) => (
                   <TiltCard
                     key={item.label}
-                    className="rounded-[28px] border border-ink-100 bg-ink-50 p-4 dark:border-white/8 dark:bg-white/4"
+                    className="surface-tile bg-ink-50/88 p-4"
                   >
                     <p className="text-xs uppercase tracking-[0.18em] text-ink-400 dark:text-ink-300">{item.label}</p>
                     <p className="mt-3 font-display text-xl font-semibold text-ink-950 dark:text-white">{item.value}</p>
@@ -509,14 +509,14 @@ function InterviewSessionPage() {
                     recorderState.mode === 'video' ? (
                       <video controls className="w-full rounded-[24px]" src={recorderState.previewUrl} />
                     ) : (
-                      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-4 rounded-[24px] border border-white/10 bg-white/6 p-6 text-white">
+                      <div className="glass-media flex h-full min-h-[220px] flex-col items-center justify-center gap-4 p-6 text-white">
                         <Icon name="waves" className="h-10 w-10 text-coral-300" />
                         <p className="font-display text-2xl font-semibold">Audio answer captured</p>
                         <audio controls className="w-full" src={recorderState.previewUrl} />
                       </div>
                     )
                   ) : (
-                    <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-4 rounded-[24px] border border-white/10 bg-white/6 p-6 text-center text-white/74">
+                    <div className="glass-media flex h-full min-h-[220px] flex-col items-center justify-center gap-4 p-6 text-center text-white/74">
                       <Icon name="camera" className="h-10 w-10 text-coral-300" />
                       <p className="font-display text-2xl font-semibold text-white">No preview yet</p>
                       <p className="max-w-xs text-sm leading-6">
@@ -547,14 +547,14 @@ function InterviewSessionPage() {
                           ? 'border-coral-300 bg-coral-50 dark:bg-coral-500/10'
                           : isLocked
                             ? 'border-ink-100 bg-ink-50 opacity-40 cursor-not-allowed dark:border-white/5 dark:bg-black/20'
-                            : 'border-ink-100 bg-ink-50 hover:bg-ink-100/70 dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/7'
+                            : 'border-ink-100 bg-white/84 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_30px_rgba(7,17,31,0.08)] dark:border-white/8 dark:bg-white/4 dark:hover:bg-white/7'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold text-ink-950 dark:text-white">Question {index + 1}</p>
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            isLocked ? 'bg-ink-200 text-ink-500' : isAnswered ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          className={`status-chip ${
+                            isLocked ? 'status-chip-neutral' : isAnswered ? 'status-chip-success' : 'status-chip-warning'
                           }`}
                         >
                           {isLocked ? 'Locked' : isAnswered ? 'Answered' : 'Pending'}
@@ -574,3 +574,4 @@ function InterviewSessionPage() {
 }
 
 export default InterviewSessionPage
+

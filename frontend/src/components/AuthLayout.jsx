@@ -6,15 +6,15 @@ function AuthLayout() {
   return (
     <div className="app-shell px-4 py-6 sm:px-6 lg:px-8">
       <RouteLoader />
-      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-7xl flex-col rounded-[24px] border border-white/70 bg-white/60 p-4 shadow-[var(--shadow-panel)] backdrop-blur-lg lg:p-5">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-7xl flex-col rounded-[28px] border border-white/70 bg-white/62 p-4 shadow-[var(--shadow-panel)] backdrop-blur-xl lg:p-5">
         <header className="flex items-center justify-between pb-5">
           <Brand />
-          <Link to="/" className="text-sm font-medium text-ink-500 transition hover:text-ink-950">
+          <Link to="/" className="rounded-full px-3 py-2 text-sm font-medium text-ink-500 transition hover:bg-white/70 hover:text-ink-950">
             Back to site
           </Link>
         </header>
 
-        <div className="grid flex-1 gap-5 lg:grid-cols-[minmax(0,1.1fr)_420px]">
+        <div className="grid flex-1 gap-5 lg:grid-cols-[minmax(0,1.08fr)_440px]">
           <section className="premium-stage mesh-lines reveal-up p-6 md:p-8">
             <ParallaxLayer speed={4} className="absolute inset-0 pointer-events-none">
               <span className="ambient-orb left-10 top-10 h-40 w-40 bg-gold-300/30" />

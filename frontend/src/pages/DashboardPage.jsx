@@ -186,8 +186,8 @@ function DashboardPage() {
         </div>
       </Reveal>
 
-      {loading ? <p className="text-sm text-ink-500">Loading dashboard...</p> : null}
-      {error ? <p className="text-sm text-coral-500">{error}</p> : null}
+      {loading ? <div className="loading-shell text-sm text-ink-500">Loading dashboard...</div> : null}
+      {error ? <div className="status-banner status-banner-warning">{error}</div> : null}
 
       {!loading && !error ? (
         <>
@@ -215,11 +215,11 @@ function DashboardPage() {
                   {interviews.slice(0, 5).map((interview) => (
                     <TiltCard
                       key={interview._id}
-                      className="rounded-[28px] border border-ink-100 bg-ink-50 p-4 dark:border-white/8 dark:bg-white/4"
+                      className="surface-tile bg-ink-50/88 p-4"
                     >
                       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <p className="font-semibold text-ink-950 dark:text-white">{interview.title}</p>
-                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-700 dark:bg-white/10 dark:text-white/80">
+                        <span className="status-chip status-chip-neutral">
                           {interview.status}
                         </span>
                       </div>
@@ -237,9 +237,9 @@ function DashboardPage() {
                 title="Global leaderboard"
                 copy="Candidates are ranked by their completed interview performance."
                 action={
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="action-bar">
                     <select
-                      className="rounded-full bg-ink-100 px-3 py-1.5 text-xs font-semibold text-ink-700 outline-none dark:bg-white/10 dark:text-white"
+                      className="input-field !w-auto !rounded-full !px-3 !py-1.5 text-xs font-semibold"
                       value={leaderboardFilter}
                       onChange={(e) => setLeaderboardFilter(e.target.value)}
                     >
@@ -248,14 +248,14 @@ function DashboardPage() {
                       <option value="weekly">This Week</option>
                     </select>
                     <select
-                      className="rounded-full bg-ink-100 px-3 py-1.5 text-xs font-semibold text-ink-700 outline-none dark:bg-white/10 dark:text-white"
+                      className="input-field !w-auto !rounded-full !px-3 !py-1.5 text-xs font-semibold"
                       value={leaderboardSort}
                       onChange={(e) => setLeaderboardSort(e.target.value)}
                     >
                       <option value="averageScore">Highest Score</option>
                       <option value="totalInterviews">Most Interviews</option>
                     </select>
-                    <div className="rounded-full bg-coral-500/10 px-3 py-1.5 text-xs font-semibold text-coral-600 dark:text-coral-400">
+                    <div className="status-chip status-chip-danger">
                       <Icon name="trophy" className="mr-1 inline h-3.5 w-3.5" />
                       Live ranking
                     </div>
@@ -272,7 +272,7 @@ function DashboardPage() {
                     leaderboard.map((entry, index) => (
                       <TiltCard
                         key={entry.userId || entry.email}
-                        className="rounded-[28px] border border-ink-100 bg-ink-50 p-4 dark:border-white/8 dark:bg-white/4"
+                        className="surface-tile bg-ink-50/88 p-4"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div>
@@ -283,14 +283,14 @@ function DashboardPage() {
                               Best {entry.bestScore} | {entry.interviewsCompleted} interviews
                             </p>
                           </div>
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-700 dark:bg-white/10 dark:text-white/80">
+                          <span className="status-chip status-chip-info">
                             Avg {entry.averageScore}
                           </span>
                         </div>
                       </TiltCard>
                     ))
                   ) : (
-                    <div className="rounded-3xl bg-ink-50 p-4 text-sm text-ink-600 dark:bg-white/4 dark:text-ink-200">
+                    <div className="empty-state">
                       Complete more interviews to start populating the leaderboard.
                     </div>
                   )}

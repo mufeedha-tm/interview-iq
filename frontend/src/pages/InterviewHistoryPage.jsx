@@ -147,14 +147,14 @@ function InterviewHistoryPage() {
       </Panel>
 
       <Panel title="Saved interviews" copy="Your interview performance is here .">
-        {loading ? <p className="text-sm text-ink-500">Loading interviews...</p> : null}
+        {loading ? <div className="loading-shell text-sm text-ink-500">Loading interviews...</div> : null}
         {!loading && interviews.length === 0 ? (
-          <p className="text-sm text-ink-500">No interviews found yet.</p>
+          <div className="empty-state">No interviews found yet.</div>
         ) : null}
 
         <div className="space-y-4">
           {interviews.map((interview) => (
-            <div key={interview._id} className="rounded-[28px] border border-ink-100 bg-white p-5 dark:border-white/8 dark:bg-white/4">
+            <div key={interview._id} className="surface-tile p-5">
               {editingId === interview._id ? (
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-3">
@@ -192,9 +192,9 @@ function InterviewHistoryPage() {
                       <p className="mt-2 text-sm text-ink-500 dark:text-ink-300">{interview.description || 'Interview practice session'}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-700">{interview.status}</span>
-                      <span className="rounded-full bg-coral-50 px-3 py-1 text-xs font-semibold text-coral-600">{interview.difficulty}</span>
-                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="status-chip status-chip-neutral">{interview.status}</span>
+                      <span className="status-chip status-chip-danger">{interview.difficulty}</span>
+                      <span className="status-chip status-chip-success">
                         Score: {interview.results?.score ?? 'Pending'}
                       </span>
                     </div>
@@ -202,7 +202,7 @@ function InterviewHistoryPage() {
 
                   <div className="flex flex-wrap gap-2">
                     {(interview.skills || []).map((skill) => (
-                      <span key={skill} className="rounded-full bg-ink-50 px-3 py-1 text-xs font-medium text-ink-700">
+                      <span key={skill} className="status-chip status-chip-info">
                         {skill}
                       </span>
                     ))}

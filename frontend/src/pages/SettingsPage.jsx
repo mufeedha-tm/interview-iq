@@ -74,7 +74,7 @@ function SettingsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Panel title="Appearance" copy="Switch the workspace theme instantly.">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="action-bar">
             <ThemeToggle />
             <p className="text-sm text-ink-500 dark:text-ink-300">Your choice is saved locally for the next visit.</p>
           </div>
@@ -150,8 +150,8 @@ function SettingsPage() {
           <Panel key={group.title} title={group.title} copy="Configured for your current prep rhythm.">
             <div className="space-y-4">
               {group.items.map((item) => (
-                <label key={item} className="flex items-start gap-3 rounded-3xl bg-ink-50 p-4 text-sm text-ink-700 dark:bg-white/4 dark:text-ink-100">
-                  <input type="checkbox" className="mt-1 rounded border-ink-300" defaultChecked />
+                <label key={item} className="toggle-card">
+                  <input type="checkbox" className="premium-check" defaultChecked />
                   <span>{item}</span>
                 </label>
               ))}

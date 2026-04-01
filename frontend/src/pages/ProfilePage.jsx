@@ -142,14 +142,14 @@ function ProfilePage() {
       <div className="page-grid">
         <Panel title="Profile details" copy="The information that shapes your interview simulations.">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-ink-950 text-2xl font-semibold text-white">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#07111f_0%,#223b59_45%,#ff6b57_100%)] text-2xl font-semibold text-white shadow-[0_18px_40px_rgba(7,17,31,0.2)]">
               {form.avatarUrl ? (
                 <img src={form.avatarUrl} alt="Profile" className="h-full w-full object-cover" />
               ) : (
                 <span>{(form.firstName?.[0] || 'I').toUpperCase()}</span>
               )}
             </div>
-            <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-2xl border border-ink-200 bg-white px-4 py-3 text-sm font-semibold text-ink-700 dark:border-white/10 dark:bg-ink-800 dark:text-white">
+            <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-2xl border border-ink-200 bg-white/92 px-4 py-3 text-sm font-semibold text-ink-700 shadow-[0_12px_28px_rgba(7,17,31,0.06)] dark:border-white/10 dark:bg-ink-800 dark:text-white">
               {uploading ? 'Uploading image...' : 'Upload profile image'}
               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             </label>
@@ -237,13 +237,13 @@ function ProfilePage() {
 
         <Panel title="Profile progress" copy="Keep your profile updated so interview questions match your real target role and experience.">
           <div className="space-y-4">
-            <div className="rounded-3xl bg-ink-50 p-4 text-sm leading-6 text-ink-700 dark:bg-white/4 dark:text-ink-100">
+            <div className="feature-tile text-sm leading-6 text-ink-700 dark:text-ink-100">
               <strong>Role targeting:</strong> Your selected target role directly shapes the interview questions generated in each session.
             </div>
-            <div className="rounded-3xl bg-ink-50 p-4 text-sm leading-6 text-ink-700 dark:bg-white/4 dark:text-ink-100">
+            <div className="feature-tile text-sm leading-6 text-ink-700 dark:text-ink-100">
               <strong>Experience alignment:</strong> Keep your experience level and bio accurate for better coaching tips and evaluation feedback.
             </div>
-            <div className="rounded-3xl bg-ink-50 p-4 text-sm leading-6 text-ink-700 dark:bg-white/4 dark:text-ink-100">
+            <div className="feature-tile text-sm leading-6 text-ink-700 dark:text-ink-100">
               <strong>Status:</strong> {loading ? 'Loading profile...' : 'Profile is synced and ready for interview personalization'}
             </div>
           </div>

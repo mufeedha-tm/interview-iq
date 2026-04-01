@@ -39,21 +39,23 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <section className="soft-panel flex items-center p-6 md:p-8">
-      <form className="w-full space-y-6" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <Link to="/login" className="inline-flex items-center gap-2 mb-4 text-sm font-semibold text-ink-500 hover:text-ink-900 dark:text-ink-300 dark:hover:text-white transition">
+    <section className="form-shell flex items-center">
+      <form className="form-content w-full space-y-6" onSubmit={handleSubmit}>
+        <div className="form-heading">
+          <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 transition hover:text-ink-900 dark:text-ink-300 dark:hover:text-white">
             <Icon name="arrowLeft" className="h-4 w-4" />
             Back to login
           </Link>
-          <h1 className="font-display text-3xl font-semibold text-ink-950 dark:text-white">Reset your password</h1>
-          <p className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+          <h1 className="form-title">Reset your password</h1>
+          <p className="form-copy">
             Enter your email address and we'll send you an OTP to reset your password.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="form-group">
+          <label className="form-label" htmlFor="forgot-email">Email</label>
           <input
+            id="forgot-email"
             className="input-field"
             type="email"
             value={email}

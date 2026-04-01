@@ -70,7 +70,7 @@ function ResumeAnalyzerPage() {
 
       <div className="page-grid">
         <Panel title="Upload resume" copy="PDF only. If Cloudinary is not configured, the app falls back to a local upload path during development.">
-          <div className="rounded-[32px] border border-dashed border-ink-200 bg-ink-50/70 p-8 text-center dark:border-white/10 dark:bg-white/4">
+          <div className="dropzone-shell">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white text-coral-500 shadow-sm dark:bg-ink-800">
               <Icon name="upload" className="h-6 w-6" />
             </div>
@@ -92,7 +92,7 @@ function ResumeAnalyzerPage() {
                   <p className="text-xs text-ink-500 dark:text-ink-300">Resume saved successfully to your profile.</p>
                 </div>
                 <div className="flex w-full justify-center">
-                  <div className="w-full max-w-2xl h-[560px] overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm dark:border-white/10 dark:bg-ink-900">
+                  <div className="h-[560px] w-full max-w-2xl overflow-hidden rounded-[24px] border border-ink-200 bg-white shadow-sm dark:border-white/10 dark:bg-ink-900">
                     <object data={resumeUrl} type="application/pdf" className="h-full w-full">
                       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
                         <p className="text-sm text-ink-600 dark:text-ink-200">
@@ -116,12 +116,12 @@ function ResumeAnalyzerPage() {
               <div className="space-y-4">
                 <div className="flex items-center gap-3 mb-6">
                    <p className="text-sm font-semibold uppercase tracking-widest text-ink-500">Global Score</p>
-                   <div className="px-4 py-1.5 rounded-full text-lg font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                   <div className="score-badge">
                      {aiEvaluation.score} / 100
                    </div>
                 </div>
                 {aiEvaluation.tips.map((item, idx) => (
-                  <div key={idx} className="rounded-3xl bg-ink-50 p-4 text-sm leading-6 text-ink-700 dark:bg-white/4 dark:text-ink-100 border border-ink-100 dark:border-white/5">
+                  <div key={idx} className="feature-tile text-sm leading-6 text-ink-700 dark:text-ink-100">
                     {item}
                   </div>
                 ))}
@@ -132,7 +132,7 @@ function ResumeAnalyzerPage() {
                   Upload a PDF resume to generate a live AI rating and feedback checklist.
                 </p>
                 {resumeTips.map((tip) => (
-                  <div key={tip} className="rounded-3xl bg-ink-50 p-4 text-sm leading-6 text-ink-700 dark:bg-white/4 dark:text-ink-100 border border-ink-100 dark:border-white/5">
+                  <div key={tip} className="feature-tile text-sm leading-6 text-ink-700 dark:text-ink-100">
                     {tip}
                   </div>
                 ))}

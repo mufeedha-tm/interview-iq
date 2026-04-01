@@ -90,18 +90,18 @@ function VerifyEmailPage() {
   }
 
   return (
-    <section className="soft-panel flex items-center p-6 md:p-8">
-      <form className="w-full space-y-6" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <p className="text-sm uppercase tracking-[0.2em] text-ink-400">Verify your account</p>
-          <h1 className="font-display text-3xl font-semibold text-ink-950 dark:text-white">Enter the email OTP</h1>
-          <p className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+    <section className="form-shell flex items-center">
+      <form className="form-content w-full space-y-6" onSubmit={handleSubmit}>
+        <div className="form-heading">
+          <p className="form-kicker">Verify your account</p>
+          <h1 className="form-title">Enter the email OTP</h1>
+          <p className="form-copy">
             Signup now sends a real request to <code>/api/auth/signup</code>, and this step verifies
             <code> /api/auth/verify-email</code>.
           </p>
           <div
-            className={`rounded-3xl border p-4 text-sm ${
-              emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'
+            className={`status-banner ${
+              emailSent ? 'status-banner-success' : 'status-banner-warning'
             }`}
           >
             <p className="font-semibold">{emailSent ? 'Email delivery: Sent to inbox' : 'Email delivery: Failed'}</p>
@@ -119,27 +119,35 @@ function VerifyEmailPage() {
         </div>
 
         <div className="space-y-4">
-          <input
-            className="input-field"
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Email address"
-            autoComplete="email"
-            required
-          />
-          <input
-            className="input-field"
-            type="text"
-            name="otp"
-            value={form.otp}
-            onChange={handleChange}
-            placeholder="6-digit OTP"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-          />
+          <div className="form-group">
+            <label className="form-label" htmlFor="verify-email">Email</label>
+            <input
+              id="verify-email"
+              className="input-field"
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Email address"
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="verify-otp">OTP code</label>
+            <input
+              id="verify-otp"
+              className="input-field otp-field"
+              type="text"
+              name="otp"
+              value={form.otp}
+              onChange={handleChange}
+              placeholder="000000"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -153,7 +161,7 @@ function VerifyEmailPage() {
 
         <p className="text-center text-sm text-ink-500 dark:text-ink-300">
           Already verified?{' '}
-          <Link to="/login" className="font-semibold text-ink-950 dark:text-white">
+          <Link to="/login" className="font-semibold text-ink-950 transition hover:text-coral-500 dark:text-white dark:hover:text-sky-300">
             Log in
           </Link>
         </p>

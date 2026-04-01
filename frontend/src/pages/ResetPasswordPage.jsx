@@ -113,19 +113,19 @@ function ResetPasswordPage() {
   }
 
   return (
-    <section className="soft-panel flex items-center p-6 md:p-8">
-      <form className="w-full space-y-6" onSubmit={handleSubmit}>
-        <div className="space-y-2">
-          <p className="text-sm tracking-widest text-ink-500">{form.email}</p>
-          <h1 className="font-display text-3xl font-semibold text-ink-950 dark:text-white">Verify OTP & Reset</h1>
-          <p className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+    <section className="form-shell flex items-center">
+      <form className="form-content w-full space-y-6" onSubmit={handleSubmit}>
+        <div className="form-heading">
+          <p className="form-kicker">{form.email}</p>
+          <h1 className="form-title">Verify OTP & Reset</h1>
+          <p className="form-copy">
             Enter the 6-digit code sent to your email to set a new password.
           </p>
         </div>
 
         <div
-          className={`rounded-3xl border p-4 text-sm ${
-            emailSent ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-amber-200 bg-amber-50 text-amber-800'
+          className={`status-banner ${
+            emailSent ? 'status-banner-success' : 'status-banner-warning'
           }`}
         >
           <p className="font-semibold">{emailStatusTitle}</p>
@@ -140,36 +140,44 @@ function ResetPasswordPage() {
         </div>
 
         <div className="space-y-4">
-          <input
-            className="input-field max-w-[200px] text-center tracking-widest border-2 focus:border-indigo-500"
-            type="text"
-            name="otp"
-            value={form.otp}
-            onChange={handleChange}
-            placeholder="000000"
-            maxLength={6}
-            required
-            autoComplete="off"
-          />
-
-          <div className="flex items-center rounded-[28px] border border-ink-200 bg-white px-4 py-1 dark:border-white/10 dark:bg-ink-800">
+          <div className="form-group">
+            <label className="form-label" htmlFor="reset-otp">OTP code</label>
             <input
-              className="w-full bg-transparent py-4 text-ink-950 outline-none dark:text-white"
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              value={form.password}
+              id="reset-otp"
+              className="input-field otp-field border-2"
+              type="text"
+              name="otp"
+              value={form.otp}
               onChange={handleChange}
-              placeholder="New password"
-              minLength={6}
+              placeholder="000000"
+              maxLength={6}
               required
+              autoComplete="off"
             />
-            <button
-              type="button"
-              className="text-ink-400 transition hover:text-ink-700 dark:text-ink-300 dark:hover:text-white"
-              onClick={() => setShowPassword((current) => !current)}
-            >
-              <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
-            </button>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="reset-password">New password</label>
+            <div className="input-shell">
+              <input
+                id="reset-password"
+                className="w-full bg-transparent py-4 text-ink-950 outline-none dark:text-white"
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="New password"
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                className="input-icon-button shrink-0"
+                onClick={() => setShowPassword((current) => !current)}
+              >
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 

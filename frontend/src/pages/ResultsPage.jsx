@@ -34,12 +34,12 @@ function ResultsPage() {
   }, [interviewId, navigate])
 
   if (loading) {
-    return <p className="text-sm text-ink-500">Loading your comprehensive report...</p>
+    return <div className="loading-shell text-sm text-ink-500">Loading your comprehensive report...</div>
   }
 
   if (!interview || !interview.results) {
     return (
-      <div className="flex flex-col items-center justify-center p-10 text-center">
+      <div className="empty-state flex flex-col items-center justify-center p-10 text-center">
         <Icon name="waves" className="h-12 w-12 text-ink-400 mb-4" />
         <h2 className="text-2xl font-semibold mb-2">No Results Available</h2>
         <p className="text-ink-500 max-w-sm mb-6">This interview appears to be incomplete or missing an evaluation score.</p>
@@ -72,7 +72,7 @@ function ResultsPage() {
               <Icon name="download" className="h-4 w-4" />
               Export JSON
             </Button>
-            <div className="rounded-full bg-emerald-500/10 px-6 py-2 text-xl font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <div className="score-badge">
               {results.score ?? 0} / 100
             </div>
           </div>
@@ -81,7 +81,7 @@ function ResultsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Reveal>
-          <TiltCard className="h-full rounded-[32px] border border-ink-100 bg-white p-8 dark:border-white/5 dark:bg-white/4">
+          <TiltCard className="surface-tile h-full p-8">
             <h3 className="font-display text-2xl font-semibold mb-6">Strengths</h3>
             {results.strengths?.length > 0 ? (
               <ul className="space-y-4">
@@ -99,7 +99,7 @@ function ResultsPage() {
         </Reveal>
 
         <Reveal delay={100}>
-          <TiltCard className="h-full rounded-[32px] border border-ink-100 bg-white p-8 dark:border-white/5 dark:bg-white/4">
+          <TiltCard className="surface-tile h-full p-8">
             <h3 className="font-display text-2xl font-semibold mb-6">Actionable Improvements</h3>
             {results.improvements?.length > 0 || results.coachingTips?.length > 0 ? (
               <ul className="space-y-4">
@@ -121,7 +121,7 @@ function ResultsPage() {
         <Panel title="Detailed Competency Rubric" copy="AI evaluation markers strictly grading your methodology.">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(results.rubric || []).map((rb, idx) => (
-              <div key={idx} className="rounded-2xl border border-ink-100 bg-ink-50 p-5 dark:border-white/10 dark:bg-white/5">
+              <div key={idx} className="feature-tile">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-bold text-ink-900 dark:text-white uppercase tracking-wider text-xs">{rb.name}</p>
                   <p className="font-display text-lg font-semibold text-coral-500">{rb.score}/100</p>
@@ -137,9 +137,9 @@ function ResultsPage() {
         <Panel title="Transcripts & Playback" copy="Review your given responses. If you recorded media, you can play it back below.">
           <div className="space-y-8">
             {answers && answers.map((ans, idx) => (
-              <TiltCard key={idx} className="rounded-3xl border border-ink-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-[#111]">
+              <TiltCard key={idx} className="surface-tile p-6 dark:bg-[#111]">
                 <div className="mb-4">
-                  <span className="inline-block rounded-full bg-ink-200/50 px-3 py-1 text-xs font-semibold text-ink-600 dark:bg-white/10 dark:text-white/70 mb-3">
+                  <span className="status-chip status-chip-neutral mb-3 inline-flex">
                     Question {idx + 1}
                   </span>
                   <p className="font-display text-xl font-semibold text-ink-950 dark:text-white leading-relaxed">
@@ -158,7 +158,7 @@ function ResultsPage() {
                       <p className="font-semibold text-ink-900 dark:text-white">AI Analysis</p>
                       <div className="flex items-center gap-2">
                         <span className="text-xs uppercase tracking-wider text-ink-500">Score</span>
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                        <span className="status-chip status-chip-success text-sm">
                           {ans.evaluation.score}/100
                         </span>
                       </div>
