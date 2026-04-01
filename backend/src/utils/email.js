@@ -22,31 +22,77 @@ const getMissingEmailFields = () => {
   return missing;
 };
 
-const createEmailTransporter = () => {
+const getBaseTransportOptions = () => ({
+  auth: {
+    user: email.user,
+    pass: email.pass,
+  },
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
+});
+
+const createTransportCandidates = () => {
   const missingFields = getMissingEmailFields();
   if (missingFields.length > 0) {
     throw new ApiError(`Email config missing: ${missingFields.join(", ")}`, 500);
   }
 
-  if (email.host) {
-    return nodemailer.createTransport({
-      host: email.host,
-      port: email.port || 465,
-      secure: email.port === 465 ? true : email.secure,
-      auth: {
-        user: email.user,
-        pass: email.pass,
+  const baseOptions = getBaseTransportOptions();
+
+  if (isGmailService()) {
+    return [
+      {
+        label: "gmail-service",
+        transporter: nodemailer.createTransport({
+          service: "gmail",
+          ...baseOptions,
+        }),
       },
-    });
+      {
+        label: "gmail-starttls",
+        transporter: nodemailer.createTransport({
+          host: "smtp.gmail.com",
+          port: 587,
+          secure: false,
+          requireTLS: true,
+          tls: {
+            servername: "smtp.gmail.com",
+            minVersion: "TLSv1.2",
+          },
+          ...baseOptions,
+        }),
+      },
+    ];
   }
 
-  return nodemailer.createTransport({
-    service: email.service || "gmail",
-    auth: {
-      user: email.user,
-      pass: email.pass,
+  if (email.host) {
+    return [
+      {
+        label: "smtp-host",
+        transporter: nodemailer.createTransport({
+          host: email.host,
+          port: email.port || 465,
+          secure: email.port === 465 ? true : email.secure,
+          tls: {
+            servername: email.host,
+            minVersion: "TLSv1.2",
+          },
+          ...baseOptions,
+        }),
+      },
+    ];
+  }
+
+  return [
+    {
+      label: email.service || "default-service",
+      transporter: nodemailer.createTransport({
+        service: email.service || "gmail",
+        ...baseOptions,
+      }),
     },
-  });
+  ];
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
@@ -58,13 +104,24 @@ const sendEmail = async ({ to, subject, html, text }) => {
     text,
   };
 
-  const transporter = createEmailTransporter();
-  const info = await transporter.sendMail(payload);
+  const transportCandidates = createTransportCandidates();
+  let lastError = null;
 
-  return {
-    messageId: info.messageId,
-    deliveredVia: "email",
-  };
+  for (const { label, transporter } of transportCandidates) {
+    try {
+      const info = await transporter.sendMail(payload);
+
+      return {
+        messageId: info.messageId,
+        deliveredVia: "email",
+      };
+    } catch (error) {
+      lastError = error;
+      console.error(`Email send failed via ${label}:`, error.message || error);
+    }
+  }
+
+  throw lastError || new Error("Email delivery failed");
 };
 
 const sendInterviewSummaryEmail = async (user, interview) => {
