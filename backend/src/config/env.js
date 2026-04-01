@@ -12,6 +12,15 @@ const defaultEmailPort = normalizedEmailPort || (normalizedEmailService === "gma
 const defaultEmailSecure = process.env.EMAIL_SECURE
   ? process.env.EMAIL_SECURE === "true"
   : defaultEmailPort === 465;
+const normalizeClientUrl = (value) => {
+  const firstValue = String(value || "")
+    .split(",")[0]
+    .trim()
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/\/+$/g, "");
+
+  return firstValue || "http://localhost:5173";
+};
 
 module.exports = {
   port: process.env.PORT || 4000,
@@ -20,7 +29,7 @@ module.exports = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "15m", 
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || "default_refresh_secret",
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
-  clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
+  clientUrl: normalizeClientUrl(process.env.CLIENT_URL),
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   email: {
