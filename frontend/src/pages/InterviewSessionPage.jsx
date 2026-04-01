@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button, Panel, SectionIntro } from '../components/UI'
@@ -125,10 +125,7 @@ function InterviewSessionPage() {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current)
-          void (async () => {
-            toast.warning('Time is up for this question! Auto-saving...')
-            await handleSaveCurrentAnswer({ allowEmpty: true, advance: true })
-          })()
+          void handleTimedAutosave()
           return 0
         }
         return prev - 1
@@ -146,6 +143,11 @@ function InterviewSessionPage() {
     [answers, questions],
   )
   const liveCues = useMemo(() => getLiveAnswerCues(currentAnswer), [currentAnswer])
+
+  const handleTimedAutosave = useEffectEvent(async () => {
+    toast.warning('Time is up for this question! Auto-saving...')
+    await handleSaveCurrentAnswer({ allowEmpty: true, advance: true })
+  })
 
   function handleAnswerChange(event) {
     const value = event.target.value
