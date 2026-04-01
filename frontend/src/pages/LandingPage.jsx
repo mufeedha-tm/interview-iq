@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { Icon } from '../components/Icons'
 import { ParallaxLayer, Reveal, RouteLoader, TiltCard } from '../components/PremiumEffects'
 import { Brand, Button, Panel } from '../components/UI'
-import { getStoredToken } from '../lib/auth'
 import heroImage from '../assets/hero.png'
 
 const showcaseRows = [
@@ -31,9 +30,6 @@ const workflow = [
 ]
 
 function LandingPage() {
-  const isLoggedIn = Boolean(getStoredToken())
-  const protectedPath = (path) => (isLoggedIn ? path : '/login')
-
   return (
     <div className="app-shell px-4 py-5 sm:px-6 lg:px-8">
       <RouteLoader />
@@ -82,16 +78,16 @@ function LandingPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-3">
-                    <Button to={protectedPath('/start-interview')} variant="accent">
+                    <Button to="/login" variant="accent">
                       Start mock round
                     </Button>
-                    <Button to={protectedPath('/resume-analyzer')} variant="secondary">
+                    <Button to="/login" variant="secondary">
                       Analyze resume
                     </Button>
-                    <Button to={protectedPath('/results')} variant="ghost">
+                    <Button to="/login" variant="ghost">
                       View results
                     </Button>
-                    <Button to={protectedPath('/dashboard')} variant="secondary">
+                    <Button to="/login" variant="secondary">
                       Explore dashboard
                     </Button>
                   </div>
