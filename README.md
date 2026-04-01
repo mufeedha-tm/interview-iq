@@ -76,10 +76,14 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
 
-EMAIL_SERVICE=gmail
-EMAIL_USER=<your_email_address>
-EMAIL_PASS=<your_email_app_password>
-EMAIL_FROM=no-reply@example.com
+EMAIL_SERVICE=sendgrid
+EMAIL_USER=apikey
+EMAIL_PASS=SG_<your_sendgrid_api_key>
+SENDGRID_API_KEY=
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_FROM=<your_verified_sender_email>
 EMAIL_FROM_NAME=InterviewIQ
 
 CLOUDINARY_CLOUD_NAME=<cloud_name>
@@ -91,9 +95,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note:
-- The app sends mail with Nodemailer using your email account credentials.
-- Configure `EMAIL_SERVICE`, `EMAIL_USER`, and `EMAIL_PASS` for both development and production.
-- If `EMAIL_SERVICE=gmail`, set `EMAIL_FROM` to the same Gmail address as `EMAIL_USER`.
+- The app sends mail with Nodemailer over SendGrid SMTP.
+- Use `EMAIL_SERVICE=sendgrid`, `EMAIL_USER=apikey`, and `EMAIL_PASS` (or `SENDGRID_API_KEY`) for both development and production.
+- `EMAIL_FROM` must be a verified sender in your SendGrid account.
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when email delivery is slow.
 - `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
 - If you use MongoDB Atlas, whitelist your current IP in Atlas Network Access or the backend cannot start.
@@ -155,10 +159,14 @@ JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
-EMAIL_SERVICE=gmail
-EMAIL_USER=<your_gmail_address>
-EMAIL_PASS=<your_gmail_app_password>
-EMAIL_FROM=no-reply@<your-domain>
+EMAIL_SERVICE=sendgrid
+EMAIL_USER=apikey
+EMAIL_PASS=SG_<your_sendgrid_api_key>
+SENDGRID_API_KEY=
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_FROM=<your_verified_sender_email>
 EMAIL_FROM_NAME=InterviewIQ
 CLOUDINARY_CLOUD_NAME=<cloud_name>
 CLOUDINARY_API_KEY=<api_key>
