@@ -2,10 +2,11 @@ const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
 const { ApiError } = require("./apiError");
 
+const isGmailService = () => String(email.service || "").toLowerCase() === "gmail";
+
 const getFromAddress = () => {
-  const service = String(email.service || "").toLowerCase();
   const fromEmail =
-    service === "gmail"
+    isGmailService()
       ? email.user || email.fromEmail || "no-reply@interviewiq.app"
       : email.fromEmail || email.user || "no-reply@interviewiq.app";
 
@@ -15,15 +16,8 @@ const getFromAddress = () => {
 const getMissingEmailFields = () => {
   const missing = [];
 
-  if (!email.service) {
-    missing.push("EMAIL_SERVICE");
-  }
-  if (!email.user) {
-    missing.push("EMAIL_USER");
-  }
-  if (!email.pass) {
-    missing.push("EMAIL_PASS");
-  }
+  if (!email.user) missing.push("EMAIL_USER");
+  if (!email.pass) missing.push("EMAIL_PASS");
 
   return missing;
 };
@@ -34,8 +28,20 @@ const createEmailTransporter = () => {
     throw new ApiError(`Email config missing: ${missingFields.join(", ")}`, 500);
   }
 
+  if (email.host) {
+    return nodemailer.createTransport({
+      host: email.host,
+      port: email.port || 465,
+      secure: email.port === 465 ? true : email.secure,
+      auth: {
+        user: email.user,
+        pass: email.pass,
+      },
+    });
+  }
+
   return nodemailer.createTransport({
-    service: email.service,
+    service: email.service || "gmail",
     auth: {
       user: email.user,
       pass: email.pass,

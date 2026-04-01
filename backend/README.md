@@ -22,8 +22,7 @@ npm run dev
 ```
 
 If using MongoDB Atlas, make sure your current IP address is allowed in Atlas Network Access before starting the server.
-For OTP/password-reset emails, configure `EMAIL_SERVICE`, `EMAIL_USER`, and `EMAIL_PASS` and send with Nodemailer.
-If using Gmail, keep `EMAIL_FROM` equal to `EMAIL_USER`.
+For OTP/password-reset emails, configure Gmail with Nodemailer using `EMAIL_SERVICE=gmail`, `EMAIL_USER=<your_gmail_address>`, `EMAIL_PASS=<your_16_character_app_password>`, and keep `EMAIL_FROM` the same as `EMAIL_USER`.
 
 You can also run:
 

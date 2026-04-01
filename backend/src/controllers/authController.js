@@ -91,6 +91,11 @@ const classifyEmailFailure = (message = "") => {
     normalizedMessage.includes("invalid login") ||
     normalizedMessage.includes("username and password not accepted") ||
     normalizedMessage.includes("authentication unsuccessful") ||
+    normalizedMessage.includes("application-specific password") ||
+    normalizedMessage.includes("badcredentials") ||
+    normalizedMessage.includes("534-5.7.9") ||
+    normalizedMessage.includes("534 5.7.9") ||
+    normalizedMessage.includes("please log in via your web browser") ||
     normalizedMessage.includes("invalid credentials") ||
     normalizedMessage.includes("auth")
   ) {
