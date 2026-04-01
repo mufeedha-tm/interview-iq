@@ -46,7 +46,7 @@ function LoginPage() {
 
     try {
       const data = await loginUser(form)
-      loginContext(data.user || data)
+      loginContext(data)
       toast.success('Login successful')
       navigate('/dashboard')
     } catch (error) {

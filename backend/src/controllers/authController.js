@@ -36,15 +36,17 @@ const serializeUser = (user) => ({
 });
 
 const createTokenResponse = (user, res) => {
-  const token = user.generateJwtToken(jwtSecret, jwtExpiresIn);
+  const accessToken = user.generateJwtToken(jwtSecret, jwtExpiresIn);
   const refreshToken = user.generateJwtRefreshToken(jwtRefreshSecret, jwtRefreshExpiresIn);
   const cookieOptions = getCookieOptions();
 
-  res.cookie("accessToken", token, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
+  res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
   return {
     user: serializeUser(user),
+    accessToken,
+    refreshToken,
   };
 };
 
@@ -658,7 +660,7 @@ const uploadAvatar = async (req, res, next) => {
 
 const refreshToken = async (req, res, next) => {
   try {
-    const token = req.cookies.refreshToken;
+    const token = req.cookies.refreshToken || req.body?.refreshToken;
     const cookieOptions = getCookieOptions();
     if (!token) {
       return res.status(401).json({ message: "No refresh token provided" });
@@ -672,8 +674,8 @@ const refreshToken = async (req, res, next) => {
       return res.status(401).json({ message: "Invalid refresh token" });
     }
 
-    createTokenResponse(user, res);
-    return res.status(200).json({ message: "Token refreshed successfully" });
+    const payload = createTokenResponse(user, res);
+    return res.status(200).json({ message: "Token refreshed successfully", ...payload });
   } catch (error) {
     const cookieOptions = getCookieOptions();
     res.clearCookie("accessToken", cookieOptions);

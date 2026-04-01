@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearAuthSession, getStoredRefreshToken, getStoredToken, storeAuthSession } from './auth'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api',
@@ -10,6 +11,19 @@ const api = axios.create({
 
 let isRefreshing = false;
 let failedQueue = [];
+
+api.interceptors.request.use((config) => {
+  const token = getStoredToken()
+
+  if (token && !config.headers?.Authorization) {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${token}`,
+    }
+  }
+
+  return config
+})
 
 const NON_REFRESHABLE_AUTH_PATHS = [
   '/auth/login',
@@ -76,7 +90,13 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise(function(resolve, reject) {
           failedQueue.push({resolve, reject});
-        }).then(() => {
+        }).then((token) => {
+          if (token) {
+            originalRequest.headers = {
+              ...originalRequest.headers,
+              Authorization: `Bearer ${token}`,
+            }
+          }
           return api(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
@@ -87,16 +107,25 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await axios.post(
+        const refreshToken = getStoredRefreshToken()
+        const { data } = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/auth/refresh-token`,
-          {},
+          refreshToken ? { refreshToken } : {},
           { withCredentials: true }
         );
-        processQueue(null);
+        storeAuthSession(data)
+        processQueue(null, data.accessToken || null);
+        if (data.accessToken) {
+          originalRequest.headers = {
+            ...originalRequest.headers,
+            Authorization: `Bearer ${data.accessToken}`,
+          }
+        }
         return api(originalRequest);
       } catch (err) {
         processQueue(err, null);
         // Dispatch custom event to trigger logout across the app
+        clearAuthSession()
         window.dispatchEvent(new CustomEvent('auth:logout'));
         return Promise.reject(err);
       } finally {
