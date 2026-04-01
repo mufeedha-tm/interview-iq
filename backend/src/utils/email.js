@@ -49,20 +49,6 @@ const createTransportCandidates = () => {
           ...baseOptions,
         }),
       },
-      {
-        label: "gmail-starttls",
-        transporter: nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 587,
-          secure: false,
-          requireTLS: true,
-          tls: {
-            servername: "smtp.gmail.com",
-            minVersion: "TLSv1.2",
-          },
-          ...baseOptions,
-        }),
-      },
     ];
   }
 
