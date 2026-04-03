@@ -30,6 +30,12 @@ const getBaseTransportOptions = () => ({
   connectionTimeout: 10_000,
   greetingTimeout: 10_000,
   socketTimeout: 20_000,
+  // Force IPv4 to avoid IPv6 connectivity issues
+  tls: {
+    servername: undefined, // Let Node.js handle SNI
+  },
+  // Disable IPv6 and force IPv4
+  family: 4,
 });
 
 const createTransportCandidates = () => {
