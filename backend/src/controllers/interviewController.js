@@ -3,7 +3,7 @@ const { runInterviewEngine, generateNextQuestionEngine } = require("../services/
 const { sendInterviewSummaryEmail } = require("../utils/email");
 const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
-const { listRoles } = require("../config/questionBank");
+const { listQuestionRoles } = require("../services/questionBankService");
 
 const createInterview = async (req, res, next) => {
   try {
@@ -286,7 +286,7 @@ const generateInterviewEngineResponse = async (req, res, next) => {
       });
     }
 
-    const result = runInterviewEngine({
+    const result = await runInterviewEngine({
       ...req.body,
       difficulty: difficulty || "medium",
     });
@@ -299,7 +299,8 @@ const generateInterviewEngineResponse = async (req, res, next) => {
 
 const getInterviewRoles = async (_req, res, next) => {
   try {
-    res.status(200).json({ roles: listRoles() });
+    const roles = await listQuestionRoles();
+    res.status(200).json({ roles });
   } catch (error) {
     next(error);
   }
@@ -315,7 +316,7 @@ const generateNextQuestion = async (req, res, next) => {
       return res.status(404).json({ message: "Interview not found" });
     }
 
-    const nextQuestionText = generateNextQuestionEngine({
+    const nextQuestionText = await generateNextQuestionEngine({
       role: interview.title,
       interviewType: "mixed",
       difficulty: interview.difficulty,

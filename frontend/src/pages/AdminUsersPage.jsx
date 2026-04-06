@@ -153,6 +153,12 @@ function AdminUsersPage() {
         to: '/admin-dashboard',
       },
       {
+        label: 'Question bank',
+        copy: 'Manage interview questions with CRUD tools.',
+        icon: 'doc',
+        to: '/admin-questions',
+      },
+      {
         label: 'Joined reports',
         copy: 'Inspect feedback and issue reports.',
         icon: 'doc',
@@ -274,6 +280,10 @@ function AdminUsersPage() {
             <Button to="/admin-dashboard" variant="secondary">
               <Icon name="chart" className="h-4 w-4" />
               Back to dashboard
+            </Button>
+            <Button to="/admin-questions" variant="secondary">
+              <Icon name="doc" className="h-4 w-4" />
+              Question bank
             </Button>
             <Button to="/admin-reports">
               <Icon name="doc" className="h-4 w-4" />

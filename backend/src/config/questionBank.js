@@ -121,23 +121,44 @@ const QUESTION_BANK = {
   },
 };
 
+const SUPPORTED_INTERVIEW_TYPES = ["behavioral", "technical", "system-design"];
+
 function normalizeRoleKey(role) {
   const value = String(role || "").trim().toLowerCase();
   if (!value) return "fullstack";
   if (value.includes("front")) return "frontend";
   if (value.includes("back")) return "backend";
   if (value.includes("full")) return "fullstack";
-   if (value.includes("market")) return "marketing";
-   if (value.includes("hr") || value.includes("human resources") || value.includes("talent")) return "hr";
+  if (value.includes("market")) return "marketing";
+  if (value.includes("hr") || value.includes("human resources") || value.includes("talent")) return "hr";
   return "fullstack";
 }
 
-function getRoleConfig(role) {
-  const key = normalizeRoleKey(role);
-  return { key, ...QUESTION_BANK[key] };
+function normalizeInterviewType(interviewType) {
+  const value = String(interviewType || "").trim().toLowerCase();
+
+  if (SUPPORTED_INTERVIEW_TYPES.includes(value)) {
+    return value;
+  }
+
+  if (value === "system design") {
+    return "system-design";
+  }
+
+  return "technical";
 }
 
-function listRoles() {
+function getStaticRoleConfig(role) {
+  const key = normalizeRoleKey(role);
+  return {
+    key,
+    label: QUESTION_BANK[key]?.label || "Full Stack Engineer",
+    defaultSkills: QUESTION_BANK[key]?.defaultSkills || [],
+    questionLibrary: QUESTION_BANK[key]?.questionLibrary || {},
+  };
+}
+
+function listStaticRoles() {
   return Object.entries(QUESTION_BANK).map(([key, config]) => ({
     key,
     label: config.label,
@@ -146,10 +167,29 @@ function listRoles() {
   }));
 }
 
+function buildSeedQuestions() {
+  return Object.entries(QUESTION_BANK).flatMap(([roleKey, config]) =>
+    Object.entries(config.questionLibrary).flatMap(([interviewType, questions]) =>
+      questions.map((question, index) => ({
+        roleKey,
+        roleLabel: config.label,
+        interviewType,
+        question,
+        defaultSkills: config.defaultSkills,
+        order: index,
+        isActive: true,
+        source: "seed",
+      }))
+    )
+  );
+}
+
 module.exports = {
   QUESTION_BANK,
+  SUPPORTED_INTERVIEW_TYPES,
+  buildSeedQuestions,
+  getStaticRoleConfig,
+  listStaticRoles,
+  normalizeInterviewType,
   normalizeRoleKey,
-  getRoleConfig,
-  listRoles,
 };
-

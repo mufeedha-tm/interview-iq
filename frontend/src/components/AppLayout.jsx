@@ -370,6 +370,7 @@ function AppLayout() {
                   ...(user?.role === 'admin'
                     ? [
                         { label: 'Admin Dashboard', path: '/admin-dashboard', icon: 'chart' },
+                        { label: 'Admin Questions', path: '/admin-questions', icon: 'doc' },
                         { label: 'Admin Users', path: '/admin-users', icon: 'user' },
                         { label: 'Admin Reports', path: '/admin-reports', icon: 'chart' },
                       ]

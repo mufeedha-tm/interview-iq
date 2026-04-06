@@ -3,9 +3,14 @@ const app = require("./app");
 const connectDB = require("./config/db");
 const { port } = require("./config/env");
 const { verifyEmailTransport } = require("./utils/email");
+const { ensureQuestionSeedData } = require("./services/questionBankService");
 
 const start = async () => {
   await connectDB();
+  const seedStatus = await ensureQuestionSeedData();
+  if (seedStatus.seeded) {
+    console.log(`Seeded ${seedStatus.count} default interview questions.`);
+  }
 
   try {
     const emailStatus = await verifyEmailTransport({ force: true });

@@ -101,6 +101,12 @@ function AdminDashboardPage() {
         to: '/admin-users',
       },
       {
+        label: 'Question bank',
+        copy: 'Create and manage interview questions.',
+        icon: 'doc',
+        to: '/admin-questions',
+      },
+      {
         label: 'Joined reports',
         copy: 'Inspect reports and feedback records.',
         icon: 'doc',
@@ -151,6 +157,10 @@ function AdminDashboardPage() {
             <Button to="/admin-users" variant="secondary">
               <Icon name="user" className="h-4 w-4" />
               Open users
+            </Button>
+            <Button to="/admin-questions" variant="secondary">
+              <Icon name="doc" className="h-4 w-4" />
+              Manage questions
             </Button>
             <Button to="/admin-reports">
               <Icon name="doc" className="h-4 w-4" />

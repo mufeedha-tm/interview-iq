@@ -21,6 +21,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminReportsPage from './pages/AdminReportsPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminQuestionsPage from './pages/AdminQuestionsPage'
 function App() {
   const location = useLocation()
 
@@ -76,6 +77,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <PageTransition><AdminDashboardPage /></PageTransition>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-questions"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <PageTransition><AdminQuestionsPage /></PageTransition>
                 </ProtectedRoute>
               }
             />

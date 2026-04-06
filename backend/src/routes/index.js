@@ -6,6 +6,7 @@ const interviewRoutes = require("./interviewRoutes");
 const analyticsRoutes = require("./analyticsRoutes");
 const paymentRoutes = require("./paymentRoutes");
 const userRoutes = require("./userRoutes");
+const questionRoutes = require("./questionRoutes");
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use("/analytics", analyticsRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/protected", protectedRoutes);
 router.use("/users", userRoutes);
+router.use("/questions", questionRoutes);
 
 router.get("/", (req, res) => {
   res.json({ message: "InterviewIQ backend is running" });

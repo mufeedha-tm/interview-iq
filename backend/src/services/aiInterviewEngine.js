@@ -1,5 +1,5 @@
 const DEFAULT_SKILLS = ["communication", "problem solving", "technical depth"];
-const { getRoleConfig } = require("../config/questionBank");
+const { getQuestionPool } = require("./questionBankService");
 
 const FALLBACK_LIBRARY = {
   behavioral: [
@@ -44,15 +44,9 @@ function pickInterviewType(interviewType) {
   return "technical";
 }
 
-function getQuestionPool(interviewType) {
+function getFallbackQuestionPool(interviewType) {
   const type = pickInterviewType(interviewType);
   return FALLBACK_LIBRARY[type] || FALLBACK_LIBRARY.technical;
-}
-
-function getRoleQuestionPool(role, interviewType) {
-  const roleConfig = getRoleConfig(role);
-  const type = pickInterviewType(interviewType);
-  return roleConfig.questionLibrary?.[type] || getQuestionPool(type);
 }
 
 function buildQuestionText(baseQuestion, role, skills, difficulty) {
@@ -63,7 +57,7 @@ function buildQuestionText(baseQuestion, role, skills, difficulty) {
   return `${baseQuestion}${roleText}.${skillText}${difficultyText}`.replace(/\.\./g, ".");
 }
 
-function generateQuestions({
+async function generateQuestions({
   role,
   interviewType,
   difficulty,
@@ -72,7 +66,7 @@ function generateQuestions({
   questionCount,
 }) {
   const normalizedSkills = uniqueItems((skills || []).map((skill) => normalizeText(skill).toLowerCase()));
-  const pool = getRoleQuestionPool(role, interviewType);
+  const pool = await getQuestionPool(role, interviewType);
 
   return pool.slice(0, questionCount).map((question, index) => ({
     id: `q_${index + 1}`,
@@ -229,7 +223,7 @@ function generateFollowUpQuestions({ question, answer, evaluation, role, skills 
   }));
 }
 
-function runInterviewEngine(input) {
+async function runInterviewEngine(input) {
   const role = normalizeText(input.role) || "Software Engineer";
   const interviewType = normalizeText(input.interviewType) || "technical";
   const difficulty = normalizeText(input.difficulty).toLowerCase() || "medium";
@@ -239,7 +233,7 @@ function runInterviewEngine(input) {
   const questionToEvaluate = normalizeText(input.question);
   const answerToEvaluate = normalizeText(input.answer);
 
-  const questions = generateQuestions({
+  const questions = await generateQuestions({
     role,
     interviewType,
     difficulty,
@@ -286,7 +280,7 @@ function runInterviewEngine(input) {
   };
 }
 
-function generateNextQuestionEngine({ role, interviewType, difficulty, skills, question, answer, existingQuestions = [] }) {
+async function generateNextQuestionEngine({ role, interviewType, difficulty, skills, question, answer, existingQuestions = [] }) {
   const normalizedQuestion = normalizeText(question)
   const normalizedAnswer = normalizeText(answer)
 
