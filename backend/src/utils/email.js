@@ -70,14 +70,19 @@ const createTransportCandidates = () => {
 
   const baseOptions = getBaseTransportOptions();
 
+  const isExplicitGmailHost =
+    String(email.host || "").toLowerCase() === "smtp.gmail.com" ||
+    isGmailService();
+
   if (email.host) {
     return [
       {
-        label: "smtp-host",
+        label: isExplicitGmailHost ? "gmail-smtp" : "smtp-host",
         transporter: nodemailer.createTransport({
           host: email.host,
-          port: email.port || 465,
-          secure: email.port === 465 ? true : email.secure,
+          port: isExplicitGmailHost ? 465 : email.port || 465,
+          secure: isExplicitGmailHost ? true : email.port === 465 ? true : email.secure,
+          requireTLS: isExplicitGmailHost || email.secure,
           tls: {
             servername: email.host,
             minVersion: "TLSv1.2",
