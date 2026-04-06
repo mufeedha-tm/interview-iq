@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon --watch src --exec \"node src/server.js\"",
+    "email:check": "node src/scripts/verifyEmailConfig.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -35,12 +35,13 @@ function ResumeAnalyzerPage() {
     try {
       const data = await uploadResume(file)
       setResumeUrl(data.resumeUrl)
-      if (data.evaluation) setAiEvaluation(data.evaluation)
+      setAiEvaluation(data.evaluation || null)
       toast.success(data.message || 'Resume uploaded successfully.')
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to upload the resume.')
     } finally {
       setUploading(false)
+      event.target.value = ''
     }
   }
 

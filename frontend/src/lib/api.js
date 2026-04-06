@@ -1,8 +1,22 @@
 import axios from 'axios'
 import { clearAuthSession, storeAuthSession } from './auth'
 
+const DEFAULT_DEV_API_BASE_URL = 'http://localhost:4000/api'
+const configuredApiBaseUrl = String(import.meta.env.VITE_API_BASE_URL || '').trim()
+const configuredDevApiBaseUrl = String(import.meta.env.VITE_DEV_API_BASE_URL || '').trim()
+
+function resolveApiBaseUrl() {
+  if (import.meta.env.DEV) {
+    return configuredDevApiBaseUrl || DEFAULT_DEV_API_BASE_URL
+  }
+
+  return configuredApiBaseUrl || DEFAULT_DEV_API_BASE_URL
+}
+
+const apiBaseUrl = resolveApiBaseUrl()
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -99,7 +113,7 @@ api.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/auth/refresh-token`,
+          `${apiBaseUrl}/auth/refresh-token`,
           {},
           { withCredentials: true }
         );

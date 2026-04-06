@@ -2,7 +2,7 @@ const fs = require("fs/promises");
 const path = require("path");
 const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 const { evaluateResume } = require("../services/aiInterviewEngine");
 
 const hasCloudinaryConfig = () =>
@@ -80,6 +80,17 @@ const uploadToCloudinary = async ({ buffer, userId }) =>
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 
+const extractResumeText = async (buffer) => {
+  const parser = new PDFParse({ data: buffer });
+
+  try {
+    const result = await parser.getText();
+    return result?.text || "";
+  } finally {
+    await parser.destroy();
+  }
+};
+
 const uploadResume = async (req, res, next) => {
   try {
     if (!req.file) {
@@ -90,8 +101,8 @@ const uploadResume = async (req, res, next) => {
     let evaluationReport = null;
 
     try {
-      const pdfData = await pdfParse(buffer);
-      evaluationReport = evaluateResume(pdfData.text, req.user.targetRole);
+      const resumeText = await extractResumeText(buffer);
+      evaluationReport = evaluateResume(resumeText, req.user.targetRole);
     } catch (parseError) {
       console.error("PDF Parse error", parseError);
     }

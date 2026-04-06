@@ -40,9 +40,9 @@ function ResultsPage() {
   if (!interview || !interview.results) {
     return (
       <div className="empty-state flex flex-col items-center justify-center p-10 text-center">
-        <Icon name="waves" className="h-12 w-12 text-ink-400 mb-4" />
-        <h2 className="text-2xl font-semibold mb-2">No Results Available</h2>
-        <p className="text-ink-500 max-w-sm mb-6">This interview appears to be incomplete or missing an evaluation score.</p>
+        <Icon name="waves" className="mb-4 h-12 w-12 text-ink-400" />
+        <h2 className="mb-2 text-2xl font-semibold">No Results Available</h2>
+        <p className="mb-6 max-w-sm text-ink-500">This interview appears to be incomplete or missing an evaluation score.</p>
         <Link to="/history">
           <Button variant="secondary">Back to History</Button>
         </Link>
@@ -82,13 +82,13 @@ function ResultsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Reveal>
           <TiltCard className="surface-tile h-full p-8">
-            <h3 className="font-display text-2xl font-semibold mb-6">Strengths</h3>
+            <h3 className="mb-6 font-display text-2xl font-semibold">Strengths</h3>
             {results.strengths?.length > 0 ? (
               <ul className="space-y-4">
                 {results.strengths.map((str, i) => (
                   <li key={i} className="flex gap-4">
-                    <Icon name="check" className="mt-1 flex-shrink-0 h-5 w-5 text-emerald-500" />
-                    <span className="text-ink-700 dark:text-ink-300 leading-relaxed">{str}</span>
+                    <Icon name="check" className="mt-1 h-5 w-5 flex-shrink-0 text-emerald-500" />
+                    <span className="leading-relaxed text-ink-700 dark:text-ink-300">{str}</span>
                   </li>
                 ))}
               </ul>
@@ -100,13 +100,13 @@ function ResultsPage() {
 
         <Reveal delay={100}>
           <TiltCard className="surface-tile h-full p-8">
-            <h3 className="font-display text-2xl font-semibold mb-6">Actionable Improvements</h3>
+            <h3 className="mb-6 font-display text-2xl font-semibold">Actionable Improvements</h3>
             {results.improvements?.length > 0 || results.coachingTips?.length > 0 ? (
               <ul className="space-y-4">
                 {(results.improvements || []).concat(results.coachingTips || []).map((tip, i) => (
                   <li key={i} className="flex gap-4">
-                    <Icon name="arrowRight" className="mt-1 flex-shrink-0 h-5 w-5 text-coral-500" />
-                    <span className="text-ink-700 dark:text-ink-300 leading-relaxed">{tip}</span>
+                    <Icon name="arrowRight" className="mt-1 h-5 w-5 flex-shrink-0 text-coral-500" />
+                    <span className="leading-relaxed text-ink-700 dark:text-ink-300">{tip}</span>
                   </li>
                 ))}
               </ul>
@@ -122,11 +122,11 @@ function ResultsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {(results.rubric || []).map((rb, idx) => (
               <div key={idx} className="feature-tile">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold text-ink-900 dark:text-white uppercase tracking-wider text-xs">{rb.name}</p>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wider text-ink-900 dark:text-white">{rb.name}</p>
                   <p className="font-display text-lg font-semibold text-coral-500">{rb.score}/100</p>
                 </div>
-                <p className="text-sm text-ink-600 dark:text-ink-300 leading-6">{rb.summary}</p>
+                <p className="text-sm leading-6 text-ink-600 dark:text-ink-300">{rb.summary}</p>
               </div>
             ))}
           </div>
@@ -142,19 +142,19 @@ function ResultsPage() {
                   <span className="status-chip status-chip-neutral mb-3 inline-flex">
                     Question {idx + 1}
                   </span>
-                  <p className="font-display text-xl font-semibold text-ink-950 dark:text-white leading-relaxed">
+                  <p className="font-display text-xl font-semibold leading-relaxed text-ink-950 dark:text-white">
                     {ans.question}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-ink-50 p-5 dark:bg-white/5 mb-5">
-                  <p className="text-sm leading-7 text-ink-700 dark:text-ink-300 whitespace-pre-wrap">
+                <div className="mb-5 rounded-2xl bg-ink-50 p-5 dark:bg-white/5">
+                  <p className="whitespace-pre-wrap text-sm leading-7 text-ink-700 dark:text-ink-300">
                     {ans.answer}
                   </p>
                 </div>
 
                 {ans.evaluation && (
-                  <div className="mt-4 mb-5 rounded-2xl bg-ink-50/50 p-5 dark:bg-white/5 border border-ink-100 dark:border-white/10">
-                    <div className="flex items-center justify-between mb-3 border-b border-ink-200/50 dark:border-white/10 pb-3">
+                  <div className="mt-4 mb-5 rounded-2xl border border-ink-100 bg-ink-50/50 p-5 dark:border-white/10 dark:bg-white/5">
+                    <div className="mb-3 flex items-center justify-between border-b border-ink-200/50 pb-3 dark:border-white/10">
                       <p className="font-semibold text-ink-900 dark:text-white">AI Analysis</p>
                       <div className="flex items-center gap-2">
                         <span className="text-xs uppercase tracking-wider text-ink-500">Score</span>
@@ -164,29 +164,29 @@ function ResultsPage() {
                       </div>
                     </div>
                     {ans.evaluation.feedback && (
-                      <p className="text-sm text-ink-700 dark:text-ink-300 mb-4">{ans.evaluation.feedback}</p>
+                      <p className="mb-4 text-sm text-ink-700 dark:text-ink-300">{ans.evaluation.feedback}</p>
                     )}
                     <div className="grid gap-4 sm:grid-cols-2">
                       {ans.evaluation.strengths?.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                          <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <Icon name="check" className="h-3 w-3" /> Strengths
                           </p>
                           <ul className="space-y-1">
                             {ans.evaluation.strengths.map((str, i) => (
-                              <li key={i} className="text-xs text-ink-600 dark:text-ink-300">• {str}</li>
+                              <li key={i} className="text-xs text-ink-600 dark:text-ink-300">* {str}</li>
                             ))}
                           </ul>
                         </div>
                       )}
                       {ans.evaluation.improvements?.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-coral-600 dark:text-coral-400 mb-2 flex items-center gap-1">
+                          <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-coral-600 dark:text-coral-400">
                             <Icon name="arrowRight" className="h-3 w-3" /> Improvements
                           </p>
                           <ul className="space-y-1">
                             {ans.evaluation.improvements.map((imp, i) => (
-                              <li key={i} className="text-xs text-ink-600 dark:text-ink-300">• {imp}</li>
+                              <li key={i} className="text-xs text-ink-600 dark:text-ink-300">* {imp}</li>
                             ))}
                           </ul>
                         </div>
@@ -196,17 +196,17 @@ function ResultsPage() {
                 )}
 
                 {ans.mediaUrl && (
-                  <div className="mt-6 pt-6 border-t border-ink-100 dark:border-white/10 print:hidden">
-                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-500 dark:text-white/50 mb-4 flex items-center gap-2">
-                       <Icon name="camera" className="h-4 w-4" /> Session Replay
+                  <div className="mt-6 border-t border-ink-100 pt-6 print:hidden dark:border-white/10">
+                    <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-ink-500 dark:text-white/50">
+                      <Icon name="camera" className="h-4 w-4" /> Session Replay
                     </p>
                     <div className="overflow-hidden rounded-2xl bg-[#070b14] shadow-2xl ring-1 ring-white/10">
                       {ans.mediaType === 'video' ? (
-                        <video controls className="w-full max-w-2xl mx-auto aspect-video object-cover" src={ans.mediaUrl}></video>
+                        <video controls className="mx-auto aspect-video w-full max-w-2xl object-cover" src={ans.mediaUrl}></video>
                       ) : (
-                         <div className="p-4 flex items-center justify-center bg-gradient-to-r from-ink-900 to-ink-800">
-                            <audio controls className="w-full max-w-md" src={ans.mediaUrl}></audio>
-                         </div>
+                        <div className="flex items-center justify-center bg-gradient-to-r from-ink-900 to-ink-800 p-4">
+                          <audio controls className="w-full max-w-md" src={ans.mediaUrl}></audio>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -216,10 +216,10 @@ function ResultsPage() {
           </div>
         </Panel>
       </Reveal>
-      
+
       <div className="flex justify-center pt-6">
         <Link to="/history">
-           <Button variant="secondary">Return to History Dashboard</Button>
+          <Button variant="secondary">Return to History Dashboard</Button>
         </Link>
       </div>
     </div>

@@ -1,6 +1,8 @@
 const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
 const { ApiError } = require("./apiError");
+const EMAIL_VERIFY_CACHE_MS = Number(process.env.EMAIL_VERIFY_CACHE_MS || 10 * 60 * 1000);
+let emailVerificationCache = null;
 
 const isGmailService = () => String(email.service || "").toLowerCase() === "gmail";
 
@@ -123,6 +125,57 @@ const createTransportCandidates = () => {
   ];
 };
 
+const tryCloseTransporter = (transporter) => {
+  try {
+    transporter?.close?.();
+  } catch {
+    // Ignore transport close errors.
+  }
+};
+
+const verifyEmailTransport = async ({ force = false } = {}) => {
+  const cacheIsFresh =
+    !force &&
+    emailVerificationCache?.ready &&
+    Date.now() - emailVerificationCache.checkedAt < EMAIL_VERIFY_CACHE_MS;
+
+  if (cacheIsFresh) {
+    return emailVerificationCache;
+  }
+
+  const transportCandidates = createTransportCandidates();
+  let lastError = null;
+
+  for (const { label, transporter } of transportCandidates) {
+    try {
+      await transporter.verify();
+      emailVerificationCache = {
+        ready: true,
+        checkedAt: Date.now(),
+        transport: label,
+      };
+      tryCloseTransporter(transporter);
+      return emailVerificationCache;
+    } catch (error) {
+      lastError = error;
+      tryCloseTransporter(transporter);
+    }
+  }
+
+  emailVerificationCache = {
+    ready: false,
+    checkedAt: Date.now(),
+    transport: null,
+    error: lastError?.message || "Email transport verification failed",
+  };
+
+  throw new Error(
+    `Email transport verification failed: ${
+      emailVerificationCache.error
+    }. Check Gmail app-password setup in backend/EMAIL_SETUP.md.`
+  );
+};
+
 const sendEmail = async ({ to, subject, html, text }) => {
   const payload = {
     from: getFromAddress(),
@@ -154,6 +207,8 @@ const sendEmail = async ({ to, subject, html, text }) => {
         `Email send failed via ${label} after retries:`,
         error.message || error
       );
+    } finally {
+      tryCloseTransporter(transporter);
     }
   }
 
@@ -198,4 +253,5 @@ const sendInterviewSummaryEmail = async (user, interview) => {
 module.exports = {
   sendEmail,
   sendInterviewSummaryEmail,
+  verifyEmailTransport,
 };

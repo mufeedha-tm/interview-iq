@@ -4,6 +4,16 @@ const dotenv = require("dotenv");
 const envFile = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
+const normalizeEnvString = (value) => {
+  const normalized = String(value || "").trim();
+  return normalized || undefined;
+};
+
+const normalizeEmailSecret = (value) => {
+  const normalized = String(value || "").replace(/\s+/g, "").trim();
+  return normalized || undefined;
+};
+
 const normalizedEmailService = String(
   process.env.EMAIL_SERVICE || (process.env.EMAIL_HOST ? "smtp" : "gmail")
 ).toLowerCase();
@@ -36,9 +46,12 @@ module.exports = {
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   email: {
     service: normalizedEmailService,
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY,
-    fromEmail: process.env.EMAIL_FROM || process.env.MAIL_FROM_EMAIL || process.env.EMAIL_USER,
+    user: normalizeEnvString(process.env.EMAIL_USER)?.toLowerCase(),
+    pass: normalizeEmailSecret(process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY),
+    fromEmail:
+      normalizeEnvString(process.env.EMAIL_FROM) ||
+      normalizeEnvString(process.env.MAIL_FROM_EMAIL) ||
+      normalizeEnvString(process.env.EMAIL_USER)?.toLowerCase(),
     fromName: process.env.EMAIL_FROM_NAME || "InterviewIQ",
     host: defaultEmailHost,
     port: defaultEmailPort,

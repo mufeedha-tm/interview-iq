@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const streamifier = require("streamifier");
 const User = require("../models/userModel");
-const { sendEmail } = require("../utils/email");
+const { sendEmail, verifyEmailTransport } = require("../utils/email");
 const { jwtSecret, jwtExpiresIn, jwtRefreshSecret, jwtRefreshExpiresIn, clientUrl } = require("../config/env");
 const cloudinary = require("../config/cloudinary");
 const jwt = require("jsonwebtoken");
@@ -174,6 +174,43 @@ const buildOtpDeliveryResponse = ({ emailSent, emailFallbackReason, emailFallbac
     process.env.NODE_ENV === "production" || emailSent ? undefined : emailFallbackReason || undefined,
 });
 
+const clearOtpState = (user) => {
+  user.otpCode = undefined;
+  user.otpExpires = undefined;
+  user.otpPurpose = undefined;
+  user.otpIssuedAt = undefined;
+};
+
+const getEmailServiceUnavailableResponse = (prefixMessage, emailError) => {
+  const emailFallbackReason = emailError?.message || "Email transport verification failed";
+  const emailFallbackCode = classifyEmailFailure(emailFallbackReason);
+  const helpMessage =
+    emailFallbackCode === "auth_failed" || emailFallbackCode === "config_missing"
+      ? "Check Gmail SMTP settings in backend/.env and follow backend/EMAIL_SETUP.md."
+      : "Email service is temporarily unavailable. Please try again in a few moments.";
+
+  return {
+    statusCode: 503,
+    body: {
+      message: `${prefixMessage} ${helpMessage}`,
+      ...buildOtpDeliveryResponse({
+        emailSent: false,
+        emailFallbackReason,
+        emailFallbackCode,
+      }),
+    },
+  };
+};
+
+const ensureOtpEmailServiceReady = async (prefixMessage) => {
+  try {
+    await verifyEmailTransport();
+    return null;
+  } catch (emailError) {
+    return getEmailServiceUnavailableResponse(prefixMessage, emailError);
+  }
+};
+
 const signup = async (req, res, next) => {
   try {
     const { email, password, firstName = "", lastName = "", targetRole = "" } = req.body;
@@ -213,6 +250,11 @@ const signup = async (req, res, next) => {
       }
     }
 
+    const emailServiceIssue = await ensureOtpEmailServiceReady("Signup is temporarily unavailable.");
+    if (emailServiceIssue) {
+      return res.status(emailServiceIssue.statusCode).json(emailServiceIssue.body);
+    }
+
     const user = existing || new User({ email: normalizedEmail });
     user.password = password;
     user.firstName = firstName.trim();
@@ -233,6 +275,9 @@ const signup = async (req, res, next) => {
     });
 
     if (!emailSent) {
+      clearOtpState(user);
+      await user.save({ validateBeforeSave: false });
+
       const helpMessage = 
         emailFallbackCode === "auth_failed" || emailFallbackCode === "connection_failed"
           ? "Check your EMAIL_USER and EMAIL_PASS in .env file. See backend/EMAIL_SETUP.md for Gmail setup instructions."
@@ -343,6 +388,11 @@ const resendOtp = async (req, res, next) => {
       });
     }
 
+    const emailServiceIssue = await ensureOtpEmailServiceReady("OTP resend is temporarily unavailable.");
+    if (emailServiceIssue) {
+      return res.status(emailServiceIssue.statusCode).json(emailServiceIssue.body);
+    }
+
     const otp = user.createOtp("verify_email");
     await user.save({ validateBeforeSave: false });
 
@@ -355,6 +405,9 @@ const resendOtp = async (req, res, next) => {
     });
 
     if (!emailSent) {
+      clearOtpState(user);
+      await user.save({ validateBeforeSave: false });
+
       return res.status(502).json({
         message: "Unable to resend OTP email right now. Please try again.",
         ...buildOtpDeliveryResponse({ emailSent, emailFallbackReason, emailFallbackCode }),
@@ -423,6 +476,11 @@ const issuePasswordResetOtp = async ({ normalizedEmail, user, logLabel }) => {
     logLabel,
   });
 
+  if (!emailSent) {
+    clearOtpState(user);
+    await user.save({ validateBeforeSave: false });
+  }
+
   return {
     emailSent,
     emailFallbackReason,
@@ -450,6 +508,11 @@ const forgotPassword = async (req, res, next) => {
     const remainingMs = getOtpCooldownRemainingMs(user);
     if (remainingMs > 0) {
       return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+    }
+
+    const emailServiceIssue = await ensureOtpEmailServiceReady("Password reset is temporarily unavailable.");
+    if (emailServiceIssue) {
+      return res.status(emailServiceIssue.statusCode).json(emailServiceIssue.body);
     }
 
     const { emailSent, emailFallbackReason, emailFallbackCode } = await issuePasswordResetOtp({
@@ -494,6 +557,11 @@ const resendPasswordOtp = async (req, res, next) => {
     const remainingMs = getOtpCooldownRemainingMs(user);
     if (remainingMs > 0) {
       return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+    }
+
+    const emailServiceIssue = await ensureOtpEmailServiceReady("Password reset resend is temporarily unavailable.");
+    if (emailServiceIssue) {
+      return res.status(emailServiceIssue.statusCode).json(emailServiceIssue.body);
     }
 
     const { emailSent, emailFallbackReason, emailFallbackCode } = await issuePasswordResetOtp({

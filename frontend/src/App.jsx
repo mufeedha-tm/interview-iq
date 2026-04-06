@@ -55,9 +55,30 @@ function App() {
             <Route path="/resume-analyzer" element={<PageTransition><ResumeAnalyzerPage /></PageTransition>} />
             <Route path="/profile" element={<PageTransition><ProfilePage /></PageTransition>} />
             <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
-            <Route path="/admin-users" element={<PageTransition><AdminUsersPage /></PageTransition>} />
-            <Route path="/admin-reports" element={<PageTransition><AdminReportsPage /></PageTransition>} />
-            <Route path="/admin-dashboard" element={<PageTransition><AdminDashboardPage /></PageTransition>} />
+            <Route
+              path="/admin-users"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <PageTransition><AdminUsersPage /></PageTransition>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-reports"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <PageTransition><AdminReportsPage /></PageTransition>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <PageTransition><AdminDashboardPage /></PageTransition>
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
