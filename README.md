@@ -20,7 +20,7 @@ InterviewIQ is a full-stack MERN application for interview preparation. It cover
 - Stripe checkout integration
 - Charts/graphs with Recharts
 - Dark mode theme toggle
-- Report export (PDF + Excel-compatible CSV + JSON)
+- Report export (PDF + XLSX + JSON)
 
 ## 2) Tech Stack
 - MongoDB (Mongoose)
@@ -246,7 +246,7 @@ Deployment checklist:
 | Payment Integration (Stripe) | Done |
 | Charts / Graphs | Done |
 | Dark Mode | Done |
-| Export Reports | Done (PDF + CSV + JSON) |
+| Export Reports | Done (PDF + XLSX + JSON) |
 
 ## 10) Build & Lint Verification
 
