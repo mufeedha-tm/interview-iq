@@ -91,9 +91,16 @@ const createTransportCandidates = () => {
   if (isGmailService()) {
     return [
       {
-        label: "gmail-service",
+        label: "gmail-smtp",
         transporter: nodemailer.createTransport({
-          service: "gmail",
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,
+          requireTLS: true,
+          tls: {
+            servername: "smtp.gmail.com",
+            minVersion: "TLSv1.2",
+          },
           ...baseOptions,
         }),
       },
