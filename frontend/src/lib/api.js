@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAuthSession, getStoredRefreshToken, getStoredToken, storeAuthSession } from './auth'
+import { clearAuthSession, storeAuthSession } from './auth'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api',
@@ -13,15 +13,6 @@ let isRefreshing = false;
 let failedQueue = [];
 
 api.interceptors.request.use((config) => {
-  const token = getStoredToken()
-
-  if (token && !config.headers?.Authorization) {
-    config.headers = {
-      ...config.headers,
-      Authorization: `Bearer ${token}`,
-    }
-  }
-
   return config
 })
 
@@ -107,24 +98,16 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = getStoredRefreshToken()
         const { data } = await axios.post(
           `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api'}/auth/refresh-token`,
-          refreshToken ? { refreshToken } : {},
+          {},
           { withCredentials: true }
         );
         storeAuthSession(data)
-        processQueue(null, data.accessToken || null);
-        if (data.accessToken) {
-          originalRequest.headers = {
-            ...originalRequest.headers,
-            Authorization: `Bearer ${data.accessToken}`,
-          }
-        }
+        processQueue(null, null);
         return api(originalRequest);
       } catch (err) {
         processQueue(err, null);
-        // Dispatch custom event to trigger logout across the app
         clearAuthSession()
         window.dispatchEvent(new CustomEvent('auth:logout'));
         return Promise.reject(err);

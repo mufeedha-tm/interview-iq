@@ -203,7 +203,13 @@ const signup = async (req, res, next) => {
     if (existing) {
       const remainingMs = getOtpCooldownRemainingMs(existing);
       if (remainingMs > 0) {
-        return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+        return res.status(200).json({
+          message: `A verification OTP has already been sent. Please check your email or request a new code in ${Math.ceil(
+            remainingMs / 1000
+          )} seconds.`,
+          emailSent: true,
+          retryAfter: remainingMs,
+        });
       }
     }
 
@@ -324,7 +330,11 @@ const resendOtp = async (req, res, next) => {
 
     const remainingMs = getOtpCooldownRemainingMs(user);
     if (remainingMs > 0) {
-      return res.status(429).json({ message: getOtpCooldownMessage(remainingMs) });
+      return res.status(200).json({
+        message: getOtpCooldownMessage(remainingMs),
+        emailSent: false,
+        retryAfter: remainingMs,
+      });
     }
 
     const otp = user.createOtp("verify_email");

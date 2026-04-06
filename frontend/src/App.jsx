@@ -20,6 +20,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminReportsPage from './pages/AdminReportsPage'
+import AdminDashboardPage from './pages/AdminDashboardPage'
 function App() {
   const location = useLocation()
 
@@ -56,6 +57,7 @@ function App() {
             <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
             <Route path="/admin-users" element={<PageTransition><AdminUsersPage /></PageTransition>} />
             <Route path="/admin-reports" element={<PageTransition><AdminReportsPage /></PageTransition>} />
+            <Route path="/admin-dashboard" element={<PageTransition><AdminDashboardPage /></PageTransition>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

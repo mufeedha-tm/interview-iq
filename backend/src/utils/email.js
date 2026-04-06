@@ -46,18 +46,6 @@ const createTransportCandidates = () => {
 
   const baseOptions = getBaseTransportOptions();
 
-  if (isGmailService()) {
-    return [
-      {
-        label: "gmail-service",
-        transporter: nodemailer.createTransport({
-          service: "gmail",
-          ...baseOptions,
-        }),
-      },
-    ];
-  }
-
   if (email.host) {
     return [
       {
@@ -70,6 +58,18 @@ const createTransportCandidates = () => {
             servername: email.host,
             minVersion: "TLSv1.2",
           },
+          ...baseOptions,
+        }),
+      },
+    ];
+  }
+
+  if (isGmailService()) {
+    return [
+      {
+        label: "gmail-service",
+        transporter: nodemailer.createTransport({
+          service: "gmail",
           ...baseOptions,
         }),
       },

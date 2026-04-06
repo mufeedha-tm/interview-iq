@@ -1,22 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCurrentUser, logoutUser as apiLogout } from '../services/authService'
-import { clearAuthSession, getStoredToken, getStoredUser, storeAuthSession } from '../lib/auth'
+import { clearAuthSession, getStoredUser, storeAuthSession } from '../lib/auth'
 import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => getStoredUser())
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(getStoredUser()))
-  const [loading, setLoading] = useState(() => Boolean(getStoredUser() || getStoredToken()))
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const storedUser = getStoredUser()
-    const storedToken = getStoredToken()
-
-    if (!storedUser && !storedToken) {
-      setLoading(false)
-      return
-    }
-
     async function loadUser() {
       try {
         const data = await getCurrentUser()
@@ -24,6 +16,9 @@ export function AuthProvider({ children }) {
           setUser(data.user)
           setIsAuthenticated(true)
           storeAuthSession(data)
+        } else {
+          setUser(null)
+          setIsAuthenticated(false)
         }
       } catch {
         setUser(null)
@@ -33,6 +28,7 @@ export function AuthProvider({ children }) {
         setLoading(false)
       }
     }
+
     loadUser()
   }, [])
 

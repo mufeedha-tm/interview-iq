@@ -4,11 +4,12 @@ const dotenv = require("dotenv");
 const envFile = process.env.NODE_ENV === "test" ? ".env.test" : ".env";
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
-const normalizedEmailService = String(process.env.EMAIL_SERVICE || "gmail").toLowerCase();
+const normalizedEmailService = String(
+  process.env.EMAIL_SERVICE || (process.env.EMAIL_HOST ? "smtp" : "gmail")
+).toLowerCase();
 const usingGmailService = normalizedEmailService === "gmail";
-const normalizedEmailPort =
-  !usingGmailService && process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
-const defaultEmailHost = usingGmailService ? undefined : process.env.EMAIL_HOST;
+const normalizedEmailPort = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
+const defaultEmailHost = process.env.EMAIL_HOST || undefined;
 const defaultEmailPort = normalizedEmailPort;
 const defaultEmailSecure = process.env.EMAIL_SECURE
   ? process.env.EMAIL_SECURE === "true"

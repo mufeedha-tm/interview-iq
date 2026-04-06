@@ -195,8 +195,197 @@ const getLeaderboard = async (req, res, next) => {
   }
 };
 
+const User = require("../models/userModel");
+
+const getAdminDashboard = async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can access dashboard" });
+    }
+
+    // Total users count
+    const totalUsers = await User.countDocuments();
+
+    // Total verified users
+    const verifiedUsers = await User.countDocuments({ isVerified: true });
+
+    // Subscription breakdown
+    const subscriptionBreakdown = await User.aggregate([
+      {
+        $group: {
+          _id: "$subscriptionTier",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Total interviews
+    const totalInterviews = await Interview.countDocuments();
+
+    // Completed interviews
+    const completedInterviews = await Interview.countDocuments({ status: "completed" });
+
+    // Active users (at least 1 interview in last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const activeUsers = await Interview.distinct("user", {
+      createdAt: { $gte: sevenDaysAgo },
+    });
+
+    // New signups (last 7 days)
+    const newSignups = await User.countDocuments({
+      createdAt: { $gte: sevenDaysAgo },
+    });
+
+    // New signups by day (last 7 days)
+    const signupsByDay = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: sevenDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    // Average interview score
+    const avgScoreResult = await Interview.aggregate([
+      { $match: { "results.score": { $exists: true } } },
+      { $group: { _id: null, avgScore: { $avg: "$results.score" } } },
+    ]);
+    const averageScore = avgScoreResult.length > 0 ? Math.round(avgScoreResult[0].avgScore * 100) / 100 : 0;
+
+    // Most popular skills
+    const topSkills = await Interview.aggregate([
+      { $unwind: "$skills" },
+      { $group: { _id: "$skills", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $project: { _id: 0, skill: "$_id", count: 1 } },
+    ]);
+
+    // Top performing users
+    const topUsers = await Interview.aggregate([
+      { $match: { "results.score": { $exists: true } } },
+      {
+        $group: {
+          _id: "$user",
+          avgScore: { $avg: "$results.score" },
+          totalInterviews: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      { $unwind: "$userInfo" },
+      {
+        $project: {
+          userId: "$userInfo._id",
+          name: {
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$userInfo.firstName", ""] },
+                  " ",
+                  { $ifNull: ["$userInfo.lastName", ""] },
+                ],
+              },
+            },
+          },
+          email: "$userInfo.email",
+          avgScore: { $round: ["$avgScore", 2] },
+          totalInterviews: 1,
+        },
+      },
+      { $sort: { avgScore: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Interviews by difficulty
+    const interviewsByDifficulty = await Interview.aggregate([
+      {
+        $group: {
+          _id: "$difficulty",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Monthly interviews trend (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const monthlyInterviews = await Interview.aggregate([
+      { $match: { createdAt: { $gte: sixMonthsAgo } } },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { "_id.year": 1, "_id.month": 1 },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $concat: [
+              { $toString: "$_id.year" },
+              "-",
+              {
+                $cond: {
+                  if: { $lt: ["$_id.month", 10] },
+                  then: { $concat: ["0", { $toString: "$_id.month" }] },
+                  else: { $toString: "$_id.month" },
+                },
+              },
+            ],
+          },
+          count: 1,
+        },
+      },
+    ]);
+
+    res.status(200).json({
+      totalUsers,
+      verifiedUsers,
+      totalInterviews,
+      completedInterviews,
+      activeUsers: activeUsers.length,
+      newSignups,
+      averageScore,
+      subscriptionBreakdown,
+      topSkills,
+      topUsers,
+      interviewsByDifficulty,
+      signupsByDay,
+      monthlyInterviews,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAnalytics,
   getInterviewUserReport,
   getLeaderboard,
+  getAdminDashboard,
 };

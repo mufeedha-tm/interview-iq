@@ -9,3 +9,8 @@ export async function fetchLeaderboard(filter = 'all-time', sortBy = 'averageSco
   const { data } = await api.get(`/analytics/leaderboard?filter=${filter}&sortBy=${sortBy}`)
   return data
 }
+
+export async function getAdminDashboard() {
+  const { data } = await api.get('/analytics/admin-dashboard')
+  return data
+}
