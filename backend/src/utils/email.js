@@ -30,6 +30,7 @@ const getBaseTransportOptions = () => ({
   connectionTimeout: 30_000,
   greetingTimeout: 30_000,
   socketTimeout: 45_000,
+  family: 4,
   tls: {
     rejectUnauthorized: false,
   },
