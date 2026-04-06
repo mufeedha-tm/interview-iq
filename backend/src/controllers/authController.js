@@ -233,8 +233,14 @@ const signup = async (req, res, next) => {
     });
 
     if (!emailSent) {
+      const helpMessage = 
+        emailFallbackCode === "auth_failed" || emailFallbackCode === "connection_failed"
+          ? "Check your EMAIL_USER and EMAIL_PASS in .env file. See backend/EMAIL_SETUP.md for Gmail setup instructions."
+          : "Email service is temporarily unavailable. Please try again in a few moments.";
+
       return res.status(502).json({
-        message: "Unable to send verification OTP email right now. Please try again.",
+        message: `Signup successful but verification email delivery failed. ${helpMessage}`,
+        help: "If this persists, contact support or try later.",
         ...buildOtpDeliveryResponse({ emailSent, emailFallbackReason, emailFallbackCode }),
       });
     }

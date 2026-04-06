@@ -27,16 +27,39 @@ const getBaseTransportOptions = () => ({
     user: email.user,
     pass: email.pass,
   },
-  connectionTimeout: 10_000,
-  greetingTimeout: 10_000,
-  socketTimeout: 20_000,
-  // Force IPv4 to avoid IPv6 connectivity issues
+  connectionTimeout: 30_000,
+  greetingTimeout: 30_000,
+  socketTimeout: 45_000,
   tls: {
-    servername: undefined, // Let Node.js handle SNI
+    rejectUnauthorized: false,
   },
-  // Disable IPv6 and force IPv4
-  family: 4,
+  pool: {
+    maxConnections: 5,
+    maxMessages: 100,
+    rateDelta: 4000,
+    rateLimit: 14,
+  },
 });
+
+const withRetry = async (fn, maxRetries = 3, delayMs = 1000) => {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        const delay = delayMs * Math.pow(2, attempt - 1);
+        console.warn(
+          `Email send attempt ${attempt} failed, retrying in ${delay}ms:`,
+          error.message
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+};
 
 const createTransportCandidates = () => {
   const missingFields = getMissingEmailFields();
@@ -101,19 +124,32 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
   for (const { label, transporter } of transportCandidates) {
     try {
-      const info = await transporter.sendMail(payload);
+      const info = await withRetry(
+        () => transporter.sendMail(payload),
+        3,
+        1000
+      );
 
       return {
         messageId: info.messageId,
         deliveredVia: "email",
+        transport: label,
       };
     } catch (error) {
       lastError = error;
-      console.error(`Email send failed via ${label}:`, error.message || error);
+      console.error(
+        `Email send failed via ${label} after retries:`,
+        error.message || error
+      );
     }
   }
 
-  throw lastError || new Error("Email delivery failed");
+  const errorMsg =
+    lastError?.message || "Email delivery failed after all attempts";
+  console.error("Final email send error:", errorMsg);
+  throw new Error(
+    `Email delivery failed: ${errorMsg}. Please check EMAIL_USER and EMAIL_PASS configuration.`
+  );
 };
 
 const sendInterviewSummaryEmail = async (user, interview) => {
