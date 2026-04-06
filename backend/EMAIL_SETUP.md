@@ -23,6 +23,7 @@ Notes:
 - Paste the app password without spaces. The backend also strips accidental spaces automatically now.
 - Keep `EMAIL_FROM` the same as `EMAIL_USER`.
 - Port `465` with `EMAIL_SECURE=true` is the recommended setup for this project.
+- If a hosted backend environment blocks 465, try `EMAIL_PORT=587` with `EMAIL_SECURE=false` and `EMAIL_HOST=smtp.gmail.com`.
 
 ## Gmail steps
 

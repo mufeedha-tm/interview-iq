@@ -71,20 +71,36 @@ const createTransportCandidates = () => {
   }
 
   const baseOptions = getBaseTransportOptions();
-  const gmailExplicitTransport = () => ({
-    label: "gmail-smtp",
-    transporter: nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      requireTLS: true,
-      tls: {
-        servername: "smtp.gmail.com",
-        minVersion: "TLSv1.2",
-      },
-      ...baseOptions,
-    }),
-  });
+  const gmailExplicitTransports = () => [
+    {
+      label: "gmail-smtp-ssl",
+      transporter: nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        requireTLS: true,
+        tls: {
+          servername: "smtp.gmail.com",
+          minVersion: "TLSv1.2",
+        },
+        ...baseOptions,
+      }),
+    },
+    {
+      label: "gmail-smtp-tls",
+      transporter: nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        tls: {
+          servername: "smtp.gmail.com",
+          minVersion: "TLSv1.2",
+        },
+        ...baseOptions,
+      }),
+    },
+  ];
 
   const isExplicitGmailHost = String(email.host || "").toLowerCase() === "smtp.gmail.com";
 
@@ -107,14 +123,14 @@ const createTransportCandidates = () => {
     ];
 
     if (isExplicitGmailHost || isGmailService()) {
-      candidates.push(gmailExplicitTransport());
+      candidates.push(...gmailExplicitTransports());
     }
 
     return candidates;
   }
 
   if (isGmailService()) {
-    return [gmailExplicitTransport()];
+    return gmailExplicitTransports();
   }
 
   return [
