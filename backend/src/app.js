@@ -12,7 +12,12 @@ const { errorHandler } = require("./middleware/errorMiddleware");
 const app = express();
 app.set("trust proxy", 1);
 
-const defaultClientOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const defaultClientOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5174",
+];
 const configuredClientOrigins = (process.env.CLIENT_URL || "")
   .split(",")
   .map((origin) => origin.trim())
