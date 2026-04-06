@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const Interview = require("../models/interviewModel");
 
 const getUsers = async (req, res, next) => {
   try {
@@ -43,11 +44,35 @@ const getUsers = async (req, res, next) => {
 
 const getUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    const userId = req.params.id;
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({ user });
+
+    const [totalInterviews, completedInterviews, averageScoreResult, latestInterview] = await Promise.all([
+      Interview.countDocuments({ user: userId }),
+      Interview.countDocuments({ user: userId, status: "completed" }),
+      Interview.aggregate([
+        { $match: { user: user._id, "results.score": { $exists: true } } },
+        { $group: { _id: null, averageScore: { $avg: "$results.score" } } },
+      ]),
+      Interview.findOne({ user: userId })
+        .sort({ updatedAt: -1 })
+        .select("title status difficulty skills results.score updatedAt"),
+    ]);
+
+    res.status(200).json({
+      user,
+      stats: {
+        totalInterviews,
+        completedInterviews,
+        averageScore: averageScoreResult.length
+          ? Math.round(averageScoreResult[0].averageScore * 100) / 100
+          : 0,
+        latestInterview,
+      },
+    });
   } catch (error) {
     next(error);
   }
