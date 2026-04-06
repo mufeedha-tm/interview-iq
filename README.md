@@ -143,10 +143,6 @@ If sign-up is failing with "Connection timeout" or "502 error", your email confi
 4. Restart backend: `npm run dev`
 5. Test sign-up again
 
-**Full guide:** See [backend/QUICK_EMAIL_FIX.md](backend/QUICK_EMAIL_FIX.md) for step-by-step instructions and troubleshooting.
-
-For alternative email services (SendGrid, Brevo, etc.), see [backend/EMAIL_SETUP.md](backend/EMAIL_SETUP.md).
-
 ## 7) Stripe Webhook (Local)
 
 ```bash
