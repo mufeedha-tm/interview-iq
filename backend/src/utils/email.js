@@ -71,20 +71,32 @@ const createTransportCandidates = () => {
   }
 
   const baseOptions = getBaseTransportOptions();
+  const gmailExplicitTransport = () => ({
+    label: "gmail-smtp",
+    transporter: nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      requireTLS: true,
+      tls: {
+        servername: "smtp.gmail.com",
+        minVersion: "TLSv1.2",
+      },
+      ...baseOptions,
+    }),
+  });
 
-  const isExplicitGmailHost =
-    String(email.host || "").toLowerCase() === "smtp.gmail.com" ||
-    isGmailService();
+  const isExplicitGmailHost = String(email.host || "").toLowerCase() === "smtp.gmail.com";
 
   if (email.host) {
-    return [
+    const candidates = [
       {
-        label: isExplicitGmailHost ? "gmail-smtp" : "smtp-host",
+        label: isExplicitGmailHost ? "gmail-smtp-host" : "smtp-host",
         transporter: nodemailer.createTransport({
           host: email.host,
-          port: isExplicitGmailHost ? 465 : email.port || 465,
-          secure: isExplicitGmailHost ? true : email.port === 465 ? true : email.secure,
-          requireTLS: isExplicitGmailHost || email.secure,
+          port: email.port || 465,
+          secure: email.secure,
+          requireTLS: email.secure,
           tls: {
             servername: email.host,
             minVersion: "TLSv1.2",
@@ -93,25 +105,16 @@ const createTransportCandidates = () => {
         }),
       },
     ];
+
+    if (isExplicitGmailHost || isGmailService()) {
+      candidates.push(gmailExplicitTransport());
+    }
+
+    return candidates;
   }
 
   if (isGmailService()) {
-    return [
-      {
-        label: "gmail-smtp",
-        transporter: nodemailer.createTransport({
-          host: "smtp.gmail.com",
-          port: 465,
-          secure: true,
-          requireTLS: true,
-          tls: {
-            servername: "smtp.gmail.com",
-            minVersion: "TLSv1.2",
-          },
-          ...baseOptions,
-        }),
-      },
-    ];
+    return [gmailExplicitTransport()];
   }
 
   return [
@@ -187,6 +190,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
   const transportCandidates = createTransportCandidates();
   let lastError = null;
+  let lastErrorTransport = null;
 
   for (const { label, transporter } of transportCandidates) {
     try {
@@ -203,6 +207,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
       };
     } catch (error) {
       lastError = error;
+      lastErrorTransport = label;
       console.error(
         `Email send failed via ${label} after retries:`,
         error.message || error
@@ -214,10 +219,15 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
   const errorMsg =
     lastError?.message || "Email delivery failed after all attempts";
-  console.error("Final email send error:", errorMsg);
-  throw new Error(
+  console.error("Final email send error:", errorMsg, {
+    transport: lastErrorTransport,
+  });
+
+  const thrownError = new Error(
     `Email delivery failed: ${errorMsg}. Please check EMAIL_USER and EMAIL_PASS configuration.`
   );
+  thrownError.transport = lastErrorTransport;
+  throw thrownError;
 };
 
 const sendInterviewSummaryEmail = async (user, interview) => {

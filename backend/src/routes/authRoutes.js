@@ -5,6 +5,7 @@ const {
   signup,
   verifyEmailOtp,
   resendOtp,
+  getEmailTransportStatus,
   login,
   forgotPassword,
   resendPasswordOtp,
@@ -33,6 +34,7 @@ const upload = multer({
 router.post("/signup", signup);
 router.post("/verify-email", verifyEmailOtp);
 router.post("/resend-otp", resendOtp);
+router.get("/email-check", getEmailTransportStatus);
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/resend-password-otp", resendPasswordOtp);

@@ -22,7 +22,7 @@ const normalizedEmailPort = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PO
 const defaultEmailHost = process.env.EMAIL_HOST || undefined;
 const defaultEmailPort = normalizedEmailPort;
 const defaultEmailSecure = process.env.EMAIL_SECURE
-  ? process.env.EMAIL_SECURE === "true"
+  ? String(process.env.EMAIL_SECURE).trim().toLowerCase() === "true"
   : defaultEmailPort === 465;
 const normalizeClientUrl = (value) => {
   const firstValue = String(value || "")

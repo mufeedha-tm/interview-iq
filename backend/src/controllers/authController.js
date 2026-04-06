@@ -141,6 +141,7 @@ const withTimeout = (promise, timeoutMs, timeoutMessage) =>
 
 const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
   let emailSent = false;
+  let emailTransport = null;
   let emailFallbackReason = null;
   let emailFallbackCode = null;
 
@@ -152,23 +153,29 @@ const deliverOtpEmail = async ({ to, subject, html, text, logLabel }) => {
     );
 
     emailSent = emailResult.deliveredVia === "email";
+    emailTransport = emailResult.transport || null;
     emailFallbackReason = emailResult.fallbackReason || null;
     emailFallbackCode = emailFallbackReason ? classifyEmailFailure(emailFallbackReason) : null;
   } catch (emailError) {
+    emailTransport = emailError.transport || null;
     emailFallbackReason = emailError.message || "Email delivery failed";
     emailFallbackCode = classifyEmailFailure(emailFallbackReason);
-    console.error(`${logLabel} email delivery failed:`, emailFallbackReason);
+    console.error(`${logLabel} email delivery failed:`, emailFallbackReason, {
+      transport: emailTransport,
+    });
   }
 
   return {
     emailSent,
+    emailTransport,
     emailFallbackReason,
     emailFallbackCode,
   };
 };
 
-const buildOtpDeliveryResponse = ({ emailSent, emailFallbackReason, emailFallbackCode }) => ({
+const buildOtpDeliveryResponse = ({ emailSent, emailTransport, emailFallbackReason, emailFallbackCode }) => ({
   emailSent,
+  emailTransport: emailSent ? emailTransport : emailTransport || undefined,
   emailFallbackCode: emailSent ? undefined : emailFallbackCode,
   emailFallbackReason:
     process.env.NODE_ENV === "production" || emailSent ? undefined : emailFallbackReason || undefined,
@@ -208,6 +215,28 @@ const ensureOtpEmailServiceReady = async (prefixMessage) => {
     return null;
   } catch (emailError) {
     return getEmailServiceUnavailableResponse(prefixMessage, emailError);
+  }
+};
+
+const getEmailTransportStatus = async (req, res, next) => {
+  try {
+    const emailStatus = await verifyEmailTransport({ force: true });
+    return res.status(200).json({
+      message: "Email transport verified",
+      ready: emailStatus.ready,
+      transport: emailStatus.transport,
+      checkedAt: emailStatus.checkedAt,
+    });
+  } catch (error) {
+    return res.status(503).json({
+      message: "Email transport verification failed",
+      ready: false,
+      transport: error.transport || null,
+      error:
+        process.env.NODE_ENV === "production"
+          ? "Email transport unavailable"
+          : error.message,
+    });
   }
 };
 
@@ -786,6 +815,7 @@ module.exports = {
   signup,
   verifyEmailOtp,
   resendOtp,
+  getEmailTransportStatus,
   login,
   forgotPassword,
   resendPasswordOtp,
