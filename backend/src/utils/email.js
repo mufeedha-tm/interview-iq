@@ -191,7 +191,7 @@ const verifyEmailTransport = async ({ force = false } = {}) => {
   throw new Error(
     `Email transport verification failed: ${
       emailVerificationCache.error
-    }. Check Gmail app-password setup in backend/EMAIL_SETUP.md.`
+    }. Check Gmail app-password setup in backend/README.md and backend/.env.example.`
   );
 };
 

@@ -31,7 +31,7 @@ Before testing signup, run:
 npm run email:check
 ```
 
-If that passes, Gmail SMTP is ready. See `backend/EMAIL_SETUP.md` for the full setup guide.
+If that passes, Gmail SMTP is ready. Keep `backend/.env` aligned with `backend/.env.example` for the recommended Gmail settings.
 
 You can also run:
 

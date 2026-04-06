@@ -193,7 +193,7 @@ const getEmailServiceUnavailableResponse = (prefixMessage, emailError) => {
   const emailFallbackCode = classifyEmailFailure(emailFallbackReason);
   const helpMessage =
     emailFallbackCode === "auth_failed" || emailFallbackCode === "config_missing"
-      ? "Check Gmail SMTP settings in backend/.env and follow backend/EMAIL_SETUP.md."
+      ? "Check Gmail SMTP settings in backend/.env, backend/.env.example, and backend/README.md."
       : "Email service is temporarily unavailable. Please try again in a few moments.";
 
   return {
@@ -309,7 +309,7 @@ const signup = async (req, res, next) => {
 
       const helpMessage = 
         emailFallbackCode === "auth_failed" || emailFallbackCode === "connection_failed"
-          ? "Check your EMAIL_USER and EMAIL_PASS in .env file. See backend/EMAIL_SETUP.md for Gmail setup instructions."
+          ? "Check your EMAIL_USER and EMAIL_PASS in backend/.env and compare them with backend/.env.example and backend/README.md."
           : "Email service is temporarily unavailable. Please try again in a few moments.";
 
       return res.status(502).json({
