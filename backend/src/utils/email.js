@@ -99,11 +99,16 @@ const createTransportCandidates = () => {
 
   const baseOptions = getBaseTransportOptions();
   if (isGmailService()) {
+    // FIX: ENETUNREACH IPv6 — use explicit host instead of service:'gmail'
+    // service:'gmail' ignores family:4 in pool mode; Render resolves Gmail DNS to IPv6
+    // smtp.gmail.com port 465 (SSL) forces IPv4 and works reliably on Render
     return [
       {
         label: "gmail-service",
         transporter: nodemailer.createTransport({
-          service: "gmail",
+          host: "smtp.gmail.com",
+          port: 465,
+          secure: true,       // SSL on port 465 (not STARTTLS)
           requireTLS: true,
           ...baseOptions,
         }),
