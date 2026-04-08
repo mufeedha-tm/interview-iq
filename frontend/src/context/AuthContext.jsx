@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getCurrentUser, logoutUser as apiLogout } from '../services/authService'
-import { clearAuthSession, getStoredUser, storeAuthSession } from '../lib/auth'
+import {
+  clearAuthSession,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  getStoredUser,
+  storeAuthSession,
+} from '../lib/auth'
 import { AuthContext } from './authContext'
 
 export function AuthProvider({ children }) {
@@ -10,6 +16,17 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     async function loadUser() {
+      const hasStoredSession = Boolean(
+        getStoredUser() || getStoredAccessToken() || getStoredRefreshToken()
+      )
+
+      if (!hasStoredSession) {
+        setUser(null)
+        setIsAuthenticated(false)
+        setLoading(false)
+        return
+      }
+
       try {
         const data = await getCurrentUser()
         if (data.user) {
