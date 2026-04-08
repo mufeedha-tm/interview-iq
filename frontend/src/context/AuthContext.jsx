@@ -42,8 +42,8 @@ export function AuthProvider({ children }) {
   const logoutContext = useCallback(async () => {
     try {
       await apiLogout()
-    } catch (err) {
-      console.error('Logout failed:', err)
+    } catch {
+      // Clear local session even if the server logout request fails.
     } finally {
       setUser(null)
       setIsAuthenticated(false)

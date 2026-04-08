@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../components/UI'
@@ -9,6 +9,41 @@ function ForgotPasswordPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sendAvailableAt, setSendAvailableAt] = useState(0)
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now())
+
+  const sendCooldownSeconds = Math.max(0, Math.ceil((sendAvailableAt - cooldownNow) / 1000))
+
+  useEffect(() => {
+    if (sendAvailableAt <= Date.now()) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setCooldownNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [sendAvailableAt])
+
+  useEffect(() => {
+    if (sendAvailableAt && sendCooldownSeconds <= 0) {
+      setSendAvailableAt(0)
+    }
+  }, [sendAvailableAt, sendCooldownSeconds])
+
+  function startCooldown(retryAfterMs) {
+    const retryAfter = Number(retryAfterMs || 0)
+
+    if (retryAfter <= 0) {
+      setSendAvailableAt(0)
+      setCooldownNow(Date.now())
+      return
+    }
+
+    setSendAvailableAt(Date.now() + retryAfter)
+    setCooldownNow(Date.now())
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -18,10 +53,15 @@ function ForgotPasswordPage() {
       return
     }
 
+    if (loading || sendCooldownSeconds > 0) {
+      return
+    }
+
     setLoading(true)
 
     try {
       const data = await forgotPassword(email.trim())
+      startCooldown(data.retryAfter)
       toast.success(data.message || 'Password reset OTP sent to your email')
       navigate('/reset-password', {
         state: {
@@ -32,7 +72,9 @@ function ForgotPasswordPage() {
         },
       })
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to process your request.')
+      const responseData = error.response?.data
+      startCooldown(responseData?.retryAfter)
+      toast.error(responseData?.message || 'Unable to process your request.')
     } finally {
       setLoading(false)
     }
@@ -66,8 +108,8 @@ function ForgotPasswordPage() {
           />
         </div>
 
-        <Button type="submit" variant="primary" className="w-full" disabled={loading}>
-          {loading ? 'Sending OTP...' : 'Send OTP'}
+        <Button type="submit" variant="primary" className="w-full" disabled={loading || sendCooldownSeconds > 0}>
+          {loading ? 'Sending OTP...' : sendCooldownSeconds > 0 ? `Send OTP in ${sendCooldownSeconds}s` : 'Send OTP'}
         </Button>
       </form>
     </section>

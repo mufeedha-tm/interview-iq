@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../components/UI'
@@ -21,6 +21,8 @@ function SignupPage() {
   const [resendingOtp, setResendingOtp] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [signupResult, setSignupResult] = useState(null)
+  const [resendAvailableAt, setResendAvailableAt] = useState(0)
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now())
   const [otpForm, setOtpForm] = useState({
     email: '',
     otp: '',
@@ -34,13 +36,48 @@ function SignupPage() {
     delivery_failed: 'The mail provider rejected or failed the delivery request.',
   }
 
-  const emailStatusTitle = signupResult?.emailSent
-    ? 'Email delivery: Sent to inbox'
-    : 'Email delivery: Failed'
+  const resendCooldownSeconds = Math.max(0, Math.ceil((resendAvailableAt - cooldownNow) / 1000))
 
-  const emailStatusMessage = signupResult?.emailSent
+  const emailStatusTitle = signupResult?.cooldownActive
+    ? 'OTP request on hold'
+    : signupResult?.emailSent
+      ? 'Email delivery: Sent to inbox'
+      : 'Email delivery: Failed'
+
+  const emailStatusMessage = signupResult?.message || (signupResult?.emailSent
     ? 'OTP has been sent to your mailbox.'
-    : 'Unable to deliver OTP email right now. Please try resending.'
+    : 'Unable to deliver OTP email right now. Please try resending.')
+
+  useEffect(() => {
+    if (resendAvailableAt <= Date.now()) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setCooldownNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [resendAvailableAt])
+
+  useEffect(() => {
+    if (resendAvailableAt && resendCooldownSeconds <= 0) {
+      setResendAvailableAt(0)
+    }
+  }, [resendAvailableAt, resendCooldownSeconds])
+
+  function startResendCooldown(retryAfterMs) {
+    const retryAfter = Number(retryAfterMs || 0)
+
+    if (retryAfter <= 0) {
+      setResendAvailableAt(0)
+      setCooldownNow(Date.now())
+      return
+    }
+
+    setResendAvailableAt(Date.now() + retryAfter)
+    setCooldownNow(Date.now())
+  }
 
   function validateForm() {
     const nextErrors = {}
@@ -113,13 +150,33 @@ function SignupPage() {
         emailSent: data.emailSent,
         emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
+        cooldownActive: false,
+        message: data.message || '',
       })
       setOtpForm({
         email: form.email.trim(),
         otp: '',
       })
+      startResendCooldown(data.retryAfter)
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to create your account right now.')
+      const responseData = error.response?.data
+
+      if (responseData?.otpFlowAvailable) {
+        setSignupResult({
+          emailSent: Boolean(responseData.emailSent),
+          emailFallbackCode: responseData.emailFallbackCode || '',
+          emailFallbackReason: responseData.emailFallbackReason || '',
+          cooldownActive: Boolean(responseData.cooldownActive),
+          message: responseData.message || '',
+        })
+        setOtpForm({
+          email: form.email.trim(),
+          otp: '',
+        })
+      }
+
+      startResendCooldown(responseData?.retryAfter)
+      toast.error(responseData?.message || 'Unable to create your account right now.')
     } finally {
       setLoading(false)
     }
@@ -174,19 +231,37 @@ function SignupPage() {
       return
     }
 
+    if (resendingOtp || resendCooldownSeconds > 0) {
+      return
+    }
+
     setResendingOtp(true)
 
     try {
       const data = await resendOtp(otpForm.email.trim())
       setSignupResult((current) => ({
         ...current,
-        emailSent: data.emailSent,
+        emailSent: Boolean(data.emailSent),
         emailFallbackCode: data.emailFallbackCode || '',
         emailFallbackReason: data.emailFallbackReason || '',
+        cooldownActive: false,
+        message: data.message || '',
       }))
+      startResendCooldown(data.retryAfter)
       toast.success(data.message || 'OTP sent again.')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to resend the OTP.')
+      const responseData = error.response?.data
+
+      setSignupResult((current) => ({
+        ...current,
+        emailSent: responseData?.emailSent ?? current?.emailSent ?? false,
+        emailFallbackCode: responseData?.emailFallbackCode || current?.emailFallbackCode || '',
+        emailFallbackReason: responseData?.emailFallbackReason || current?.emailFallbackReason || '',
+        cooldownActive: Boolean(responseData?.cooldownActive),
+        message: responseData?.message || current?.message || '',
+      }))
+      startResendCooldown(responseData?.retryAfter)
+      toast.error(responseData?.message || 'Unable to resend the OTP.')
     } finally {
       setResendingOtp(false)
     }
@@ -361,8 +436,8 @@ function SignupPage() {
               <Button type="submit" variant="accent" className="flex-1" disabled={otpLoading}>
                 {otpLoading ? 'Verifying...' : 'Verify OTP'}
               </Button>
-              <Button type="button" variant="secondary" className="flex-1" disabled={resendingOtp} onClick={handleResendOtp}>
-                {resendingOtp ? 'Sending...' : 'Resend OTP'}
+              <Button type="button" variant="secondary" className="flex-1" disabled={resendingOtp || resendCooldownSeconds > 0} onClick={handleResendOtp}>
+                {resendingOtp ? 'Sending...' : resendCooldownSeconds > 0 ? `Resend OTP in ${resendCooldownSeconds}s` : 'Resend OTP'}
               </Button>
             </div>
 

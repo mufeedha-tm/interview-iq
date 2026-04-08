@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../components/UI'
@@ -25,6 +25,8 @@ function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  const [resendAvailableAt, setResendAvailableAt] = useState(0)
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now())
 
   const emailFallbackHelp = {
     timeout: 'The backend reached the email provider, but the request timed out.',
@@ -41,6 +43,39 @@ function ResetPasswordPage() {
   const emailStatusMessage = emailSent
     ? 'OTP mail is sent to your inbox.'
     : 'Unable to deliver OTP email right now. Please try resending.'
+
+  const resendCooldownSeconds = Math.max(0, Math.ceil((resendAvailableAt - cooldownNow) / 1000))
+
+  useEffect(() => {
+    if (resendAvailableAt <= Date.now()) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setCooldownNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [resendAvailableAt])
+
+  useEffect(() => {
+    if (resendAvailableAt && resendCooldownSeconds <= 0) {
+      setResendAvailableAt(0)
+    }
+  }, [resendAvailableAt, resendCooldownSeconds])
+
+  function startResendCooldown(retryAfterMs) {
+    const retryAfter = Number(retryAfterMs || 0)
+
+    if (retryAfter <= 0) {
+      setResendAvailableAt(0)
+      setCooldownNow(Date.now())
+      return
+    }
+
+    setResendAvailableAt(Date.now() + retryAfter)
+    setCooldownNow(Date.now())
+  }
 
   if (!initialEmail) {
     return <Navigate to="/forgot-password" replace />
@@ -89,15 +124,28 @@ function ResetPasswordPage() {
       return
     }
 
+    if (resending || resendCooldownSeconds > 0) {
+      return
+    }
+
     setResending(true)
     try {
       const data = await resendPasswordOtp(form.email.trim())
       setEmailSent(Boolean(data.emailSent))
       setEmailFallbackCode(data.emailFallbackCode || '')
       setEmailFallbackReason(data.emailFallbackReason || '')
+      startResendCooldown(data.retryAfter)
       toast.success(data.message || 'Password reset OTP sent again.')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to resend password OTP.')
+      const responseData = error.response?.data
+
+      if (typeof responseData?.emailSent === 'boolean') {
+        setEmailSent(responseData.emailSent)
+      }
+      setEmailFallbackCode(responseData?.emailFallbackCode || '')
+      setEmailFallbackReason(responseData?.emailFallbackReason || '')
+      startResendCooldown(responseData?.retryAfter)
+      toast.error(responseData?.message || 'Unable to resend password OTP.')
     } finally {
       setResending(false)
     }
@@ -185,8 +233,8 @@ function ResetPasswordPage() {
           {loading ? 'Resetting...' : 'Reset Password'}
         </Button>
 
-        <Button type="button" variant="secondary" className="w-full" disabled={resending} onClick={handleResendOtp}>
-          {resending ? 'Sending OTP...' : 'Resend OTP'}
+        <Button type="button" variant="secondary" className="w-full" disabled={resending || resendCooldownSeconds > 0} onClick={handleResendOtp}>
+          {resending ? 'Sending OTP...' : resendCooldownSeconds > 0 ? `Resend OTP in ${resendCooldownSeconds}s` : 'Resend OTP'}
         </Button>
       </form>
     </section>

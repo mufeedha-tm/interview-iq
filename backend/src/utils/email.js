@@ -24,6 +24,17 @@ const getMissingEmailFields = () => {
   return missing;
 };
 
+const assertEmailConfig = () => {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error("Email config missing");
+  }
+
+  const missingFields = getMissingEmailFields();
+  if (missingFields.length > 0) {
+    throw new Error("Email config missing");
+  }
+};
+
 const getBaseTransportOptions = () => ({
   auth: {
     user: email.user,
@@ -44,7 +55,7 @@ const getBaseTransportOptions = () => ({
   },
 });
 
-const withRetry = async (fn, maxRetries = 3, delayMs = 1000) => {
+const withRetry = async (fn, maxRetries = 1, delayMs = 1000) => {
   let lastError;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -195,7 +206,9 @@ const verifyEmailTransport = async ({ force = false } = {}) => {
   );
 };
 
-const sendEmail = async ({ to, subject, html, text }) => {
+const sendEmail = async ({ to, subject, html, text, maxAttempts = 1 }) => {
+  assertEmailConfig();
+
   const payload = {
     from: getFromAddress(),
     to,
@@ -212,7 +225,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
     try {
       const info = await withRetry(
         () => transporter.sendMail(payload),
-        3,
+        Math.max(1, maxAttempts),
         1000
       );
 
@@ -233,15 +246,12 @@ const sendEmail = async ({ to, subject, html, text }) => {
     }
   }
 
-  const errorMsg =
-    lastError?.message || "Email delivery failed after all attempts";
+  const errorMsg = lastError?.message || "Email delivery failed after all attempts";
   console.error("Final email send error:", errorMsg, {
     transport: lastErrorTransport,
   });
 
-  const thrownError = new Error(
-    `Email delivery failed: ${errorMsg}. Please check EMAIL_USER and EMAIL_PASS configuration.`
-  );
+  const thrownError = new Error(errorMsg);
   thrownError.transport = lastErrorTransport;
   throw thrownError;
 };
@@ -277,6 +287,7 @@ const sendInterviewSummaryEmail = async (user, interview) => {
 };
 
 module.exports = {
+  assertEmailConfig,
   sendEmail,
   sendInterviewSummaryEmail,
   verifyEmailTransport,

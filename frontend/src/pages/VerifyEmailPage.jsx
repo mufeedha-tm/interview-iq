@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { Button } from '../components/UI'
@@ -16,6 +16,8 @@ function VerifyEmailPage() {
   const [emailFallbackReason, setEmailFallbackReason] = useState(location.state?.emailFallbackReason || '')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
+  const [resendAvailableAt, setResendAvailableAt] = useState(0)
+  const [cooldownNow, setCooldownNow] = useState(() => Date.now())
 
   const emailFallbackHelp = {
     timeout: 'The backend reached the email provider, but the request timed out.',
@@ -23,6 +25,39 @@ function VerifyEmailPage() {
     config_missing: 'Email environment variables are missing on the backend.',
     connection_failed: 'The backend could not connect to the email provider.',
     delivery_failed: 'The mail provider rejected or failed the delivery request.',
+  }
+
+  const resendCooldownSeconds = Math.max(0, Math.ceil((resendAvailableAt - cooldownNow) / 1000))
+
+  useEffect(() => {
+    if (resendAvailableAt <= Date.now()) {
+      return undefined
+    }
+
+    const timer = window.setInterval(() => {
+      setCooldownNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(timer)
+  }, [resendAvailableAt])
+
+  useEffect(() => {
+    if (resendAvailableAt && resendCooldownSeconds <= 0) {
+      setResendAvailableAt(0)
+    }
+  }, [resendAvailableAt, resendCooldownSeconds])
+
+  function startResendCooldown(retryAfterMs) {
+    const retryAfter = Number(retryAfterMs || 0)
+
+    if (retryAfter <= 0) {
+      setResendAvailableAt(0)
+      setCooldownNow(Date.now())
+      return
+    }
+
+    setResendAvailableAt(Date.now() + retryAfter)
+    setCooldownNow(Date.now())
   }
 
   function handleChange(event) {
@@ -74,6 +109,10 @@ function VerifyEmailPage() {
       return
     }
 
+    if (resending || resendCooldownSeconds > 0) {
+      return
+    }
+
     setResending(true)
 
     try {
@@ -81,9 +120,18 @@ function VerifyEmailPage() {
       setEmailSent(Boolean(data.emailSent))
       setEmailFallbackCode(data.emailFallbackCode || '')
       setEmailFallbackReason(data.emailFallbackReason || '')
+      startResendCooldown(data.retryAfter)
       toast.success(data.message || 'A new OTP has been sent.')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Unable to resend the OTP.')
+      const responseData = error.response?.data
+
+      if (typeof responseData?.emailSent === 'boolean') {
+        setEmailSent(responseData.emailSent)
+      }
+      setEmailFallbackCode(responseData?.emailFallbackCode || '')
+      setEmailFallbackReason(responseData?.emailFallbackReason || '')
+      startResendCooldown(responseData?.retryAfter)
+      toast.error(responseData?.message || 'Unable to resend the OTP.')
     } finally {
       setResending(false)
     }
@@ -154,8 +202,8 @@ function VerifyEmailPage() {
           <Button type="submit" variant="accent" className="flex-1" disabled={loading}>
             {loading ? 'Verifying...' : 'Verify email'}
           </Button>
-          <Button type="button" variant="secondary" className="flex-1" onClick={handleResend} disabled={resending}>
-            {resending ? 'Sending...' : 'Resend OTP'}
+          <Button type="button" variant="secondary" className="flex-1" onClick={handleResend} disabled={resending || resendCooldownSeconds > 0}>
+            {resending ? 'Sending...' : resendCooldownSeconds > 0 ? `Resend OTP in ${resendCooldownSeconds}s` : 'Resend OTP'}
           </Button>
         </div>
 
