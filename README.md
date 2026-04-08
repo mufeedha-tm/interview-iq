@@ -80,9 +80,6 @@ EMAIL_SERVICE=gmail
 EMAIL_USER=<your_gmail_address@gmail.com>
 EMAIL_PASS=<your_16_character_gmail_app_password>
 SENDGRID_API_KEY=
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=465
-EMAIL_SECURE=true
 EMAIL_FROM=<your_gmail_address@gmail.com>
 EMAIL_FROM_NAME=InterviewIQ
 
@@ -95,9 +92,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note:
-- The app sends mail with Nodemailer using Gmail SMTP.
+- The app sends mail with Nodemailer using Gmail service mode and a Gmail App Password.
 - Use `EMAIL_SERVICE=gmail`, `EMAIL_USER=<your_gmail_address>`, and `EMAIL_PASS=<your_16_character_gmail_app_password>` for both development and production.
 - Keep `EMAIL_FROM` the same as `EMAIL_USER`.
+- Do not set `EMAIL_HOST`, `EMAIL_PORT`, or `EMAIL_SECURE` when using Gmail app-password mode.
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when email delivery is slow.
 - `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
 - If you use MongoDB Atlas, whitelist your current IP in Atlas Network Access or the backend cannot start.

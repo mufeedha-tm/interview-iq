@@ -23,7 +23,7 @@ npm run dev
 
 If using MongoDB Atlas, make sure your current IP address is allowed in Atlas Network Access before starting the server.
 For OTP/password-reset emails, configure Gmail with Nodemailer using `EMAIL_SERVICE=gmail`, `EMAIL_USER=<your_gmail_address>`, `EMAIL_PASS=<your_16_character_app_password>`, and keep `EMAIL_FROM` the same as `EMAIL_USER`.
-Use `EMAIL_HOST=smtp.gmail.com`, `EMAIL_PORT=465`, and `EMAIL_SECURE=true`.
+Do not set `EMAIL_HOST`, `EMAIL_PORT`, or `EMAIL_SECURE` when using Gmail app-password mode.
 
 Before testing signup, run:
 
@@ -31,7 +31,7 @@ Before testing signup, run:
 npm run email:check
 ```
 
-If that passes, Gmail SMTP is ready. Keep `backend/.env` aligned with `backend/.env.example` for the recommended Gmail settings.
+If that passes, Gmail mail delivery is ready. Keep `backend/.env` aligned with `backend/.env.example` for the recommended Gmail settings.
 
 You can also run:
 

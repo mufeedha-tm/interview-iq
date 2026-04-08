@@ -14,10 +14,7 @@ const normalizeEmailSecret = (value) => {
   return normalized || undefined;
 };
 
-const normalizedEmailService = String(
-  process.env.EMAIL_SERVICE || (process.env.EMAIL_HOST ? "smtp" : "gmail")
-).toLowerCase();
-const usingGmailService = normalizedEmailService === "gmail";
+const normalizedEmailService = String(process.env.EMAIL_SERVICE || "gmail").toLowerCase();
 const normalizedEmailPort = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
 const defaultEmailHost = process.env.EMAIL_HOST || undefined;
 const defaultEmailPort = normalizedEmailPort;
@@ -53,8 +50,8 @@ module.exports = {
       normalizeEnvString(process.env.MAIL_FROM_EMAIL) ||
       normalizeEnvString(process.env.EMAIL_USER)?.toLowerCase(),
     fromName: process.env.EMAIL_FROM_NAME || "InterviewIQ",
-    host: defaultEmailHost,
-    port: defaultEmailPort,
-    secure: defaultEmailSecure,
+    host: normalizedEmailService === "gmail" ? undefined : defaultEmailHost,
+    port: normalizedEmailService === "gmail" ? undefined : defaultEmailPort,
+    secure: normalizedEmailService === "gmail" ? undefined : defaultEmailSecure,
   },
 };
