@@ -1,61 +1,46 @@
+// FIX: 401 refresh-token — store tokens in localStorage, not cookies
+// Cookies fail cross-origin (Vercel frontend → Render backend on free tier)
 const USER_KEY = 'interviewiq_user';
-
-const getCookie = (name) => {
-  if (typeof document === 'undefined') return null;
-  const value = document.cookie
-    .split('; ')
-    .find((cookie) => cookie.startsWith(`${name}=`));
-  if (!value) return null;
-  return value.split('=')[1] || null;
-};
-
-const setCookie = (name, value, options = {}) => {
-  if (typeof document === 'undefined') return;
-  let cookieString = `${name}=${value}; path=/;`;
-
-  if (options.maxAge) {
-    cookieString += ` max-age=${options.maxAge};`;
-  }
-  if (options.expires) {
-    cookieString += ` expires=${options.expires.toUTCString()};`;
-  }
-  if (options.sameSite) {
-    cookieString += ` SameSite=${options.sameSite};`;
-  }
-  if (options.secure) {
-    cookieString += ' Secure;';
-  }
-
-  document.cookie = cookieString;
-};
-
-const deleteCookie = (name) => {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-};
+const ACCESS_TOKEN_KEY = 'interviewiq_access_token';
+const REFRESH_TOKEN_KEY = 'interviewiq_refresh_token';
 
 export function getStoredUser() {
-  const value = getCookie(USER_KEY);
-  if (!value) {
-    return null;
-  }
-
   try {
-    return JSON.parse(decodeURIComponent(value));
+    const value = localStorage.getItem(USER_KEY);
+    return value ? JSON.parse(value) : null;
   } catch {
     return null;
   }
 }
 
-export function storeAuthSession({ user }) {
-  if (user) {
-    setCookie(USER_KEY, encodeURIComponent(JSON.stringify(user)), {
-      maxAge: 7 * 24 * 60 * 60,
-      sameSite: 'Lax',
-    });
+export function getStoredAccessToken() {
+  return localStorage.getItem(ACCESS_TOKEN_KEY) || null;
+}
+
+export function getStoredRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || null;
+}
+
+// Called after login / signup / token refresh
+// data = { user, accessToken, refreshToken }
+export function storeAuthSession(data) {
+  try {
+    if (data?.user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+    }
+    if (data?.accessToken) {
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+    }
+    if (data?.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+    }
+  } catch {
+    // localStorage not available (private browsing etc.) — continue silently
   }
 }
 
 export function clearAuthSession() {
-  deleteCookie(USER_KEY);
+  localStorage.removeItem(USER_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
