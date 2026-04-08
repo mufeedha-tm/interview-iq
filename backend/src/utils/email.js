@@ -38,6 +38,7 @@ const assertEmailConfig = () => {
   }
 };
 
+// FIX: OTP issue — enable connection pooling so Gmail SMTP reuses connection on Render
 const getBaseTransportOptions = () => ({
   auth: {
     user: email.user,
@@ -47,7 +48,9 @@ const getBaseTransportOptions = () => ({
   greetingTimeout: EMAIL_GREETING_TIMEOUT_MS,
   socketTimeout: EMAIL_SOCKET_TIMEOUT_MS,
   family: 4,
-  pool: false,
+  pool: true,          // FIX: OTP issue — reuse SMTP connections, reduces per-mail overhead
+  maxConnections: 1,   // Gmail free accounts: one concurrent connection is safest
+  maxMessages: 3,      // Refresh pool after 3 messages to avoid stale connections
   tls: {
     minVersion: "TLSv1.2",
   },

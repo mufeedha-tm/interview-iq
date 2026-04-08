@@ -147,10 +147,11 @@ userSchema.methods.isValidPassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.methods.createOtp = function (purpose = "verify_email") {
+// FIX: OTP issue — accept custom TTL (default 5min); callers pass OTP_TTL_MS
+userSchema.methods.createOtp = function (purpose = "verify_email", ttlMs = 5 * 60 * 1000) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.otpCode = crypto.createHash("sha256").update(otp).digest("hex");
-  this.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.otpExpires = Date.now() + ttlMs;
   this.otpPurpose = purpose;
   this.otpIssuedAt = new Date();
   return otp;

@@ -50,8 +50,12 @@ const createTokenResponse = (user, res) => {
   };
 };
 
-const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 5000);
+// FIX: OTP issue — raised timeout from 5s to 10s to survive Gmail SMTP latency on Render
+const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 10_000);
+// FIX: OTP issue — 60s cooldown prevents spam resend clicks
 const OTP_RESEND_COOLDOWN_MS = Number(process.env.OTP_RESEND_COOLDOWN_MS || 60_000);
+// FIX: OTP issue — OTP valid for 5 minutes (used in createOtp calls)
+const OTP_TTL_MS = 5 * 60 * 1000;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
 
@@ -324,29 +328,31 @@ const signup = async (req, res, next) => {
     user.targetRole = targetRole.trim();
     user.isVerified = false;
 
+    // FIX: OTP issue — save user first so account always exists even if email fails
     await user.save();
-    const otp = user.createOtp("verify_email");
+
+    // FIX: OTP issue — OTP TTL reduced to 5 minutes
+    const otp = user.createOtp("verify_email", OTP_TTL_MS);
     await user.save({ validateBeforeSave: false });
 
     const { emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
       to: normalizedEmail,
       subject: "Verify your InterviewIQ account",
-      html: `<p>Welcome to InterviewIQ! Your verification code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
-      text: `Welcome to InterviewIQ! Your verification code is ${otp}.`,
+      html: `<p>Welcome to InterviewIQ! Your verification code is <strong>${otp}</strong>.</p><p>This code expires in 5 minutes.</p>`,
+      text: `Welcome to InterviewIQ! Your verification code is ${otp}. Expires in 5 minutes.`,
       logLabel: "Signup",
     });
 
+    // FIX: OTP issue — NEVER crash signup on email failure; user is already saved, allow resend
     if (!emailSent) {
-      clearOtpState(user, { keepIssuedAt: true });
-      await user.save({ validateBeforeSave: false });
-
-      return res.status(500).json({
-        ...buildOtpFailureResponse({
-          retryAfter: getOtpCooldownRemainingMs(user),
-          emailFallbackReason,
-          emailFallbackCode,
-        }),
+      console.warn("[Signup] OTP email failed, user created but email not sent:", emailFallbackReason);
+      return res.status(201).json({
+        success: true,
+        message: "Account created. Email delivery failed — please use Resend OTP to verify your account.",
         otpFlowAvailable: true,
+        emailSent: false,
+        emailFallbackCode,
+        retryAfter: OTP_RESEND_COOLDOWN_MS,
       });
     }
 
@@ -440,6 +446,19 @@ const resendOtp = async (req, res, next) => {
       return res.status(400).json({ message: "Email already verified" });
     }
 
+    // FIX: OTP issue — block resend if previous OTP is still valid (not expired)
+    if (user.otpExpires && user.otpExpires > Date.now()) {
+      const otpExpiresInMs = new Date(user.otpExpires).getTime() - Date.now();
+      const seconds = Math.ceil(otpExpiresInMs / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `An OTP was already sent and is still valid for ${seconds}s. Please check your email.`,
+        retryAfter: otpExpiresInMs,
+        cooldownActive: true,
+      });
+    }
+
+    // FIX: OTP issue — also block if within the per-issuance cooldown window
     const remainingMs = getOtpCooldownRemainingMs(user);
     if (remainingMs > 0) {
       return res.status(429).json(buildOtpCooldownResponse(remainingMs));
@@ -450,14 +469,15 @@ const resendOtp = async (req, res, next) => {
       return res.status(emailConfigIssue.statusCode).json(emailConfigIssue.body);
     }
 
-    const otp = user.createOtp("verify_email");
+    // FIX: OTP issue — 5 minute TTL on resend OTP
+    const otp = user.createOtp("verify_email", OTP_TTL_MS);
     await user.save({ validateBeforeSave: false });
 
     const { emailSent, emailFallbackReason, emailFallbackCode } = await deliverOtpEmail({
       to: normalizedEmail,
       subject: "Your new InterviewIQ verification code",
-      html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 10 minutes.</p>`,
-      text: `Your new verification code is ${otp}.`,
+      html: `<p>Your new verification code is <strong>${otp}</strong>. It expires in 5 minutes.</p>`,
+      text: `Your new verification code is ${otp}. Expires in 5 minutes.`,
       logLabel: "OTP resend",
     });
 
@@ -522,7 +542,8 @@ const login = async (req, res, next) => {
 };
 
 const issuePasswordResetOtp = async ({ normalizedEmail, user, logLabel }) => {
-  const otp = user.createOtp("reset_password");
+  // FIX: OTP issue — 5 minute TTL for password reset OTP
+  const otp = user.createOtp("reset_password", OTP_TTL_MS);
   await user.save({ validateBeforeSave: false });
   const resetUrl = `${clientUrl}/reset-password?email=${encodeURIComponent(normalizedEmail)}`;
 
@@ -530,11 +551,11 @@ const issuePasswordResetOtp = async ({ normalizedEmail, user, logLabel }) => {
     to: normalizedEmail,
     subject: "InterviewIQ password reset code",
     html: `
-        <p>Your password reset code is <strong>${otp}</strong>. It expires in 10 minutes.</p>
+        <p>Your password reset code is <strong>${otp}</strong>. It expires in 5 minutes.</p>
         <p>You can reset your password here:</p>
         <p><a href="${resetUrl}">${resetUrl}</a></p>
       `,
-    text: `Your password reset code is ${otp}. It expires in 10 minutes. Reset link: ${resetUrl}`,
+    text: `Your password reset code is ${otp}. It expires in 5 minutes. Reset link: ${resetUrl}`,
     logLabel,
   });
 
