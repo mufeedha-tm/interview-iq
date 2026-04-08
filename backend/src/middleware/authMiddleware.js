@@ -26,11 +26,12 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
+    // FIX: 401 loop — return distinct code so frontend calls refresh-token, not logout
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Not authorized, access token expired" });
-    }
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Not authorized, token invalid" });
+      return res.status(401).json({
+        message: "Access token expired",
+        code: "TOKEN_EXPIRED",  // frontend checks this to trigger refresh-token call
+      });
     }
     return res.status(401).json({ message: "Not authorized, token invalid" });
   }

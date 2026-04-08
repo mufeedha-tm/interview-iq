@@ -8,7 +8,6 @@ const jwt = require("jsonwebtoken");
 
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
-
   return {
     httpOnly: true,
     secure: isProduction,
@@ -35,19 +34,32 @@ const serializeUser = (user) => ({
   premiumExpiresAt: user.premiumExpiresAt,
 });
 
+// FIX: 401 refresh-token — always return tokens in body so frontend can use
+// localStorage when cross-origin cookies are blocked (Vercel → Render free tier)
 const createTokenResponse = (user, res) => {
   const accessToken = user.generateJwtToken(jwtSecret, jwtExpiresIn);
   const refreshToken = user.generateJwtRefreshToken(jwtRefreshSecret, jwtRefreshExpiresIn);
   const cookieOptions = getCookieOptions();
 
+  // Set cookies (works when same-origin or paid Render with custom domain)
   res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
 
+  // Also return in body — frontend MUST store these and send via Authorization header
   return {
     user: serializeUser(user),
     accessToken,
     refreshToken,
   };
+};
+
+// FIX: 401 refresh-token — extract refresh token from cookie OR Authorization header OR body
+// This handles cross-origin cookie blocking (Vercel frontend → Render backend)
+const extractRefreshToken = (req) => {
+  if (req.cookies?.refreshToken) return req.cookies.refreshToken;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) return authHeader.split(" ")[1];
+  return req.body?.refreshToken || null;
 };
 
 // FIX: OTP issue — raised timeout from 5s to 10s to survive Gmail SMTP latency on Render
@@ -835,32 +847,42 @@ const uploadAvatar = async (req, res, next) => {
   }
 };
 
+// FIX: 401 refresh-token — reads token from cookie, Authorization header, or body
 const refreshToken = async (req, res, next) => {
+  const cookieOptions = getCookieOptions();
   try {
-    const token = req.cookies.refreshToken || req.body?.refreshToken;
-    const cookieOptions = getCookieOptions();
+    // FIX: extractRefreshToken checks all 3 sources so cross-origin requests work
+    const token = extractRefreshToken(req);
+
     if (!token) {
       return res.status(401).json({ message: "No refresh token provided" });
     }
 
-    const decoded = jwt.verify(token, jwtRefreshSecret);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, jwtRefreshSecret);
+    } catch (jwtErr) {
+      res.clearCookie("accessToken", cookieOptions);
+      res.clearCookie("refreshToken", cookieOptions);
+      if (jwtErr.name === "TokenExpiredError") {
+        return res.status(401).json({ message: "Refresh token expired. Please log in again." });
+      }
+      return res.status(401).json({ message: "Invalid refresh token. Please log in again." });
+    }
+
     const user = await User.findById(decoded.id);
     if (!user) {
       res.clearCookie("accessToken", cookieOptions);
       res.clearCookie("refreshToken", cookieOptions);
-      return res.status(401).json({ message: "Invalid refresh token" });
+      return res.status(401).json({ message: "User not found. Please log in again." });
     }
 
     const payload = createTokenResponse(user, res);
     return res.status(200).json({ message: "Token refreshed successfully", ...payload });
   } catch (error) {
-    const cookieOptions = getCookieOptions();
     res.clearCookie("accessToken", cookieOptions);
     res.clearCookie("refreshToken", cookieOptions);
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Refresh token expired" });
-    }
-    return res.status(401).json({ message: "Invalid refresh token" });
+    return res.status(401).json({ message: "Token refresh failed. Please log in again." });
   }
 };
 
