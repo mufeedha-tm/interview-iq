@@ -2,6 +2,9 @@ const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
 const { ApiError } = require("./apiError");
 const EMAIL_VERIFY_CACHE_MS = Number(process.env.EMAIL_VERIFY_CACHE_MS || 10 * 60 * 1000);
+const EMAIL_CONNECTION_TIMEOUT_MS = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10_000);
+const EMAIL_GREETING_TIMEOUT_MS = Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10_000);
+const EMAIL_SOCKET_TIMEOUT_MS = Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 20_000);
 let emailVerificationCache = null;
 
 const isGmailService = () => String(email.service || "").toLowerCase() === "gmail";
@@ -40,18 +43,13 @@ const getBaseTransportOptions = () => ({
     user: email.user,
     pass: email.pass,
   },
-  connectionTimeout: 30_000,
-  greetingTimeout: 30_000,
-  socketTimeout: 45_000,
+  connectionTimeout: EMAIL_CONNECTION_TIMEOUT_MS,
+  greetingTimeout: EMAIL_GREETING_TIMEOUT_MS,
+  socketTimeout: EMAIL_SOCKET_TIMEOUT_MS,
   family: 4,
+  pool: false,
   tls: {
-    rejectUnauthorized: false,
-  },
-  pool: {
-    maxConnections: 5,
-    maxMessages: 100,
-    rateDelta: 4000,
-    rateLimit: 14,
+    minVersion: "TLSv1.2",
   },
 });
 
@@ -75,6 +73,21 @@ const withRetry = async (fn, maxRetries = 1, delayMs = 1000) => {
   throw lastError;
 };
 
+const isRenderEnvironment = () => String(process.env.RENDER || "").toLowerCase() === "true";
+
+const formatSmtpErrorMessage = (error) => {
+  const rawMessage = error?.message || "Email delivery failed";
+  const normalizedMessage = String(rawMessage).toLowerCase();
+  const timedOut =
+    normalizedMessage.includes("timed out") || normalizedMessage.includes("timeout");
+
+  if (timedOut && isRenderEnvironment()) {
+    return "SMTP connection timed out on Render. If this backend is on a Free Render web service, outbound SMTP ports 465 and 587 are blocked. Upgrade the backend service to a paid Render instance or move email sending to an API-based mail provider.";
+  }
+
+  return rawMessage;
+};
+
 const createTransportCandidates = () => {
   const missingFields = getMissingEmailFields();
   if (missingFields.length > 0) {
@@ -82,48 +95,38 @@ const createTransportCandidates = () => {
   }
 
   const baseOptions = getBaseTransportOptions();
-  const gmailExplicitTransports = () => [
-    {
-      label: "gmail-smtp-ssl",
-      transporter: nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        requireTLS: true,
-        tls: {
-          servername: "smtp.gmail.com",
-          minVersion: "TLSv1.2",
-        },
-        ...baseOptions,
-      }),
-    },
-    {
-      label: "gmail-smtp-tls",
-      transporter: nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false,
-        requireTLS: true,
-        tls: {
-          servername: "smtp.gmail.com",
-          minVersion: "TLSv1.2",
-        },
-        ...baseOptions,
-      }),
-    },
-  ];
+  if (isGmailService()) {
+    const gmailHost = email.host || "smtp.gmail.com";
+    const gmailPort = email.port || (email.secure === false ? 587 : 465);
+    const gmailSecure = gmailPort === 465 ? true : Boolean(email.secure);
 
-  const isExplicitGmailHost = String(email.host || "").toLowerCase() === "smtp.gmail.com";
+    return [
+      {
+        label: gmailSecure ? "gmail-smtp-ssl" : "gmail-smtp-tls",
+        transporter: nodemailer.createTransport({
+          host: gmailHost,
+          port: gmailPort,
+          secure: gmailSecure,
+          requireTLS: !gmailSecure,
+          tls: {
+            servername: gmailHost,
+            minVersion: "TLSv1.2",
+          },
+          ...baseOptions,
+        }),
+      },
+    ];
+  }
 
   if (email.host) {
-    const candidates = [
+    return [
       {
-        label: isExplicitGmailHost ? "gmail-smtp-host" : "smtp-host",
+        label: "smtp-host",
         transporter: nodemailer.createTransport({
           host: email.host,
-          port: email.port || 465,
-          secure: email.secure,
-          requireTLS: email.secure,
+          port: email.port || (email.secure ? 465 : 587),
+          secure: Boolean(email.secure),
+          requireTLS: !email.secure,
           tls: {
             servername: email.host,
             minVersion: "TLSv1.2",
@@ -132,16 +135,6 @@ const createTransportCandidates = () => {
         }),
       },
     ];
-
-    if (isExplicitGmailHost || isGmailService()) {
-      candidates.push(...gmailExplicitTransports());
-    }
-
-    return candidates;
-  }
-
-  if (isGmailService()) {
-    return gmailExplicitTransports();
   }
 
   return [
@@ -149,6 +142,7 @@ const createTransportCandidates = () => {
       label: email.service || "default-service",
       transporter: nodemailer.createTransport({
         service: email.service || "gmail",
+        requireTLS: true,
         ...baseOptions,
       }),
     },
@@ -187,7 +181,7 @@ const verifyEmailTransport = async ({ force = false } = {}) => {
       tryCloseTransporter(transporter);
       return emailVerificationCache;
     } catch (error) {
-      lastError = error;
+      lastError = new Error(formatSmtpErrorMessage(error));
       tryCloseTransporter(transporter);
     }
   }
@@ -235,11 +229,11 @@ const sendEmail = async ({ to, subject, html, text, maxAttempts = 1 }) => {
         transport: label,
       };
     } catch (error) {
-      lastError = error;
+      lastError = new Error(formatSmtpErrorMessage(error));
       lastErrorTransport = label;
       console.error(
         `Email send failed via ${label} after retries:`,
-        error.message || error
+        lastError.message || lastError
       );
     } finally {
       tryCloseTransporter(transporter);

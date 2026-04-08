@@ -109,6 +109,14 @@ const classifyEmailFailure = (message = "") => {
   }
 
   if (
+    normalizedMessage.includes("render") &&
+    normalizedMessage.includes("smtp") &&
+    normalizedMessage.includes("blocked")
+  ) {
+    return "smtp_blocked";
+  }
+
+  if (
     normalizedMessage.includes("econnrefused") ||
     normalizedMessage.includes("enotfound") ||
     normalizedMessage.includes("eai_again") ||
@@ -120,6 +128,20 @@ const classifyEmailFailure = (message = "") => {
   }
 
   return "delivery_failed";
+};
+
+const getOtpFailureMessage = (emailFallbackReason = "", emailFallbackCode = "") => {
+  const normalizedReason = String(emailFallbackReason).toLowerCase();
+
+  if (emailFallbackCode === "smtp_blocked" || normalizedReason.includes("render")) {
+    return "Failed to send OTP. Render is blocking the Gmail SMTP connection. Upgrade the backend Render service or use an email API provider.";
+  }
+
+  if (emailFallbackCode === "connection_failed" || emailFallbackCode === "timeout") {
+    return "Failed to send OTP. The email server could not be reached. Try again later.";
+  }
+
+  return "Failed to send OTP. Try again later.";
 };
 
 const withTimeout = (promise, timeoutMs, timeoutMessage) =>
@@ -183,13 +205,13 @@ const buildOtpDeliveryResponse = ({ emailSent, emailTransport, emailFallbackReas
 });
 
 const buildOtpFailureResponse = ({
-  message = "Failed to send OTP. Try again later.",
+  message,
   retryAfter = 0,
   emailFallbackReason,
   emailFallbackCode,
 } = {}) => ({
   success: false,
-  message,
+  message: message || getOtpFailureMessage(emailFallbackReason, emailFallbackCode),
   retryAfter: retryAfter > 0 ? retryAfter : undefined,
   ...buildOtpDeliveryResponse({
     emailSent: false,
