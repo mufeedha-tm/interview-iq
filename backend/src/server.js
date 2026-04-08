@@ -17,7 +17,7 @@ const start = async () => {
     console.log(`Email transport verified via ${emailStatus.transport}.`);
   } catch (emailError) {
     console.warn(`Email transport verification failed on startup: ${emailError.message}`);
-    console.warn("OTP emails will not send until Gmail app-password settings are corrected.");
+    console.warn("OTP emails will not send until the configured email provider settings are corrected.");
   }
 
   const server = http.createServer(app);

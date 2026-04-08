@@ -1,10 +1,13 @@
 const { email } = require("../config/env");
 const { verifyEmailTransport } = require("../utils/email");
 
-const describeConfiguredUser = () => email.user || "(missing EMAIL_USER)";
+const describeConfiguredProvider = () =>
+  email.provider === "resend"
+    ? `Resend API from ${email.fromEmail || "(missing EMAIL_FROM)"}`
+    : `SMTP for ${email.user || "(missing EMAIL_USER)"}`;
 
 const run = async () => {
-  console.log(`Checking Gmail SMTP for ${describeConfiguredUser()}...`);
+  console.log(`Checking ${describeConfiguredProvider()}...`);
   const result = await verifyEmailTransport({ force: true });
   console.log(`Email transport ready via ${result.transport}.`);
 };

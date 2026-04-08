@@ -76,10 +76,10 @@ JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
 
-EMAIL_SERVICE=gmail
-EMAIL_USER=<your_gmail_address@gmail.com>
-EMAIL_PASS=<your_16_character_gmail_app_password>
-SENDGRID_API_KEY=
+EMAIL_PROVIDER=gmail_api
+GMAIL_CLIENT_ID=<your_google_oauth_client_id>
+GMAIL_CLIENT_SECRET=<your_google_oauth_client_secret>
+GMAIL_REFRESH_TOKEN=<your_google_oauth_refresh_token>
 EMAIL_FROM=<your_gmail_address@gmail.com>
 EMAIL_FROM_NAME=InterviewIQ
 
@@ -92,9 +92,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 Note:
-- The app sends mail with Nodemailer using Gmail service mode and a Gmail App Password.
-- Use `EMAIL_SERVICE=gmail`, `EMAIL_USER=<your_gmail_address>`, and `EMAIL_PASS=<your_16_character_gmail_app_password>` for both development and production.
-- Keep `EMAIL_FROM` the same as `EMAIL_USER`.
+- Production can use `EMAIL_PROVIDER=gmail_api` with `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, and `EMAIL_FROM=<your_gmail_address>`.
+- Local development can still use Gmail/Nodemailer by setting `EMAIL_PROVIDER=smtp`, `EMAIL_SERVICE=gmail`, `EMAIL_USER=<your_gmail_address>`, and `EMAIL_PASS=<your_16_character_gmail_app_password>`.
+- Keep `EMAIL_FROM` the same as `EMAIL_USER` when using Gmail app-password mode.
 - Do not set `EMAIL_HOST`, `EMAIL_PORT`, or `EMAIL_SECURE` when using Gmail app-password mode.
 - `OTP_EMAIL_TIMEOUT_MS` limits how long signup / verify / forgot-password OTP mail requests can block the response when email delivery is slow.
 - `OTP_RESEND_COOLDOWN_MS` adds a cooldown (in ms) before another OTP can be requested for the same account.
@@ -125,16 +125,33 @@ npm install
 npm run dev
 ```
 
-## 5.5) Email Setup (Gmail OTP & Verification)
+## 5.5) Email Setup (Gmail API for Production, Gmail SMTP for Local)
 
-If sign-up is failing with "Connection timeout" or "502 error", your email config needs updating.
+If sign-up is failing on a deployed backend, use Gmail API over HTTPS instead of SMTP.
 
-**Quick Fix (5 minutes):**
+**Recommended production setup:**
+
+1. Create Google OAuth credentials for Gmail API
+2. Generate a refresh token for your Gmail account
+3. Add to `backend/.env`:
+   ```env
+   EMAIL_PROVIDER=gmail_api
+   GMAIL_CLIENT_ID=your_google_oauth_client_id
+   GMAIL_CLIENT_SECRET=your_google_oauth_client_secret
+   GMAIL_REFRESH_TOKEN=your_google_oauth_refresh_token
+   EMAIL_FROM=yourgmail@gmail.com
+   EMAIL_FROM_NAME=InterviewIQ
+   ```
+4. Restart backend: `npm run dev`
+5. Test sign-up again
+
+**Local Gmail fallback:**
 
 1. Enable 2-Factor Authentication on your Gmail account
 2. Generate a 16-character app password at https://myaccount.google.com/apppasswords
 3. Add to `backend/.env`:
    ```env
+   EMAIL_PROVIDER=smtp
    EMAIL_USER=your-email@gmail.com
    EMAIL_PASS=xxxx xxxx xxxx xxxx  (paste the app password, no spaces)
    ```
@@ -172,9 +189,10 @@ JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_SECRET=<different_long_random_secret>
 JWT_REFRESH_EXPIRES_IN=7d
-EMAIL_SERVICE=gmail
-EMAIL_USER=<your_gmail_address@gmail.com>
-EMAIL_PASS=<your_16_character_gmail_app_password>
+EMAIL_PROVIDER=gmail_api
+GMAIL_CLIENT_ID=<your_google_oauth_client_id>
+GMAIL_CLIENT_SECRET=<your_google_oauth_client_secret>
+GMAIL_REFRESH_TOKEN=<your_google_oauth_refresh_token>
 EMAIL_FROM=<your_gmail_address@gmail.com>
 EMAIL_FROM_NAME=InterviewIQ
 CLOUDINARY_CLOUD_NAME=<cloud_name>

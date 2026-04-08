@@ -1,17 +1,30 @@
+const https = require("https");
 const nodemailer = require("nodemailer");
 const { email, clientUrl } = require("../config/env");
 const { ApiError } = require("./apiError");
+
 const EMAIL_VERIFY_CACHE_MS = Number(process.env.EMAIL_VERIFY_CACHE_MS || 10 * 60 * 1000);
 const EMAIL_CONNECTION_TIMEOUT_MS = Number(process.env.EMAIL_CONNECTION_TIMEOUT_MS || 10_000);
 const EMAIL_GREETING_TIMEOUT_MS = Number(process.env.EMAIL_GREETING_TIMEOUT_MS || 10_000);
 const EMAIL_SOCKET_TIMEOUT_MS = Number(process.env.EMAIL_SOCKET_TIMEOUT_MS || 20_000);
+const RESEND_API_BASE_URL = "https://api.resend.com";
+const RESEND_TRANSPORT_LABEL = "resend-api";
+const GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GMAIL_API_BASE_URL = "https://gmail.googleapis.com";
+const GMAIL_API_TRANSPORT_LABEL = "gmail-api";
+
 let emailVerificationCache = null;
 
+const isResendProvider = () => email.provider === "resend";
+const isGmailApiProvider = () => email.provider === "gmail_api";
 const isGmailService = () => String(email.service || "").toLowerCase() === "gmail";
 
 const getFromAddress = () => {
-  const fromEmail =
-    isGmailService()
+  const fromEmail = isResendProvider()
+    ? email.fromEmail || "onboarding@resend.dev"
+    : isGmailApiProvider()
+      ? email.fromEmail || email.user || "no-reply@interviewiq.app"
+      : isGmailService()
       ? email.user || email.fromEmail || "no-reply@interviewiq.app"
       : email.fromEmail || email.user || "no-reply@interviewiq.app";
 
@@ -21,6 +34,20 @@ const getFromAddress = () => {
 const getMissingEmailFields = () => {
   const missing = [];
 
+  if (isResendProvider()) {
+    if (!email.resendApiKey) missing.push("RESEND_API_KEY");
+    if (!email.fromEmail) missing.push("EMAIL_FROM");
+    return missing;
+  }
+
+  if (isGmailApiProvider()) {
+    if (!email.gmailClientId) missing.push("GMAIL_CLIENT_ID");
+    if (!email.gmailClientSecret) missing.push("GMAIL_CLIENT_SECRET");
+    if (!email.gmailRefreshToken) missing.push("GMAIL_REFRESH_TOKEN");
+    if (!email.fromEmail) missing.push("EMAIL_FROM");
+    return missing;
+  }
+
   if (!email.user) missing.push("EMAIL_USER");
   if (!email.pass) missing.push("EMAIL_PASS");
 
@@ -28,17 +55,12 @@ const getMissingEmailFields = () => {
 };
 
 const assertEmailConfig = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error("Email config missing");
-  }
-
   const missingFields = getMissingEmailFields();
   if (missingFields.length > 0) {
     throw new Error("Email config missing");
   }
 };
 
-// FIX: OTP issue — enable connection pooling so Gmail SMTP reuses connection on Render
 const getBaseTransportOptions = () => ({
   auth: {
     user: email.user,
@@ -48,9 +70,9 @@ const getBaseTransportOptions = () => ({
   greetingTimeout: EMAIL_GREETING_TIMEOUT_MS,
   socketTimeout: EMAIL_SOCKET_TIMEOUT_MS,
   family: 4,
-  pool: true,          // FIX: OTP issue — reuse SMTP connections, reduces per-mail overhead
-  maxConnections: 1,   // Gmail free accounts: one concurrent connection is safest
-  maxMessages: 3,      // Refresh pool after 3 messages to avoid stale connections
+  pool: true,
+  maxConnections: 1,
+  maxMessages: 3,
   tls: {
     minVersion: "TLSv1.2",
   },
@@ -91,6 +113,21 @@ const formatSmtpErrorMessage = (error) => {
   return rawMessage;
 };
 
+const formatResendErrorMessage = (statusCode, payload) => {
+  const details =
+    payload?.message ||
+    payload?.error?.message ||
+    payload?.name ||
+    payload?.error ||
+    "Email delivery failed";
+
+  if (statusCode === 401 || statusCode === 403) {
+    return `Resend authorization failed: ${details}`;
+  }
+
+  return `Resend API error (${statusCode}): ${details}`;
+};
+
 const createTransportCandidates = () => {
   const missingFields = getMissingEmailFields();
   if (missingFields.length > 0) {
@@ -99,16 +136,13 @@ const createTransportCandidates = () => {
 
   const baseOptions = getBaseTransportOptions();
   if (isGmailService()) {
-    // FIX: ENETUNREACH IPv6 — use explicit host instead of service:'gmail'
-    // service:'gmail' ignores family:4 in pool mode; Render resolves Gmail DNS to IPv6
-    // smtp.gmail.com port 465 (SSL) forces IPv4 and works reliably on Render
     return [
       {
         label: "gmail-service",
         transporter: nodemailer.createTransport({
           host: "smtp.gmail.com",
           port: 465,
-          secure: true,       // SSL on port 465 (not STARTTLS)
+          secure: true,
           requireTLS: true,
           ...baseOptions,
         }),
@@ -155,6 +189,204 @@ const tryCloseTransporter = (transporter) => {
   }
 };
 
+const requestResend = (path, { method = "POST", body } = {}) =>
+  new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const url = new URL(path, RESEND_API_BASE_URL);
+
+    const req = https.request(
+      {
+        method,
+        hostname: url.hostname,
+        path: `${url.pathname}${url.search}`,
+        protocol: url.protocol,
+        headers: {
+          Authorization: `Bearer ${email.resendApiKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": "interviewiq-backend/1.0",
+          ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
+        },
+        timeout: EMAIL_SOCKET_TIMEOUT_MS,
+      },
+      (res) => {
+        let raw = "";
+        res.setEncoding("utf8");
+
+        res.on("data", (chunk) => {
+          raw += chunk;
+        });
+
+        res.on("end", () => {
+          let parsed = {};
+
+          if (raw) {
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              parsed = { message: raw };
+            }
+          }
+
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parsed);
+            return;
+          }
+
+          const error = new Error(formatResendErrorMessage(res.statusCode, parsed));
+          error.transport = RESEND_TRANSPORT_LABEL;
+          error.statusCode = res.statusCode;
+          reject(error);
+        });
+      }
+    );
+
+    req.on("timeout", () => {
+      req.destroy(new Error("Resend API request timed out"));
+    });
+
+    req.on("error", (error) => {
+      const requestError = new Error(error.message || "Resend API request failed");
+      requestError.transport = RESEND_TRANSPORT_LABEL;
+      reject(requestError);
+    });
+
+    if (payload) {
+      req.write(payload);
+    }
+
+    req.end();
+  });
+
+const requestJson = (requestUrl, { method = "POST", headers = {}, body, timeout = EMAIL_SOCKET_TIMEOUT_MS } = {}) =>
+  new Promise((resolve, reject) => {
+    const payload =
+      typeof body === "string" || Buffer.isBuffer(body)
+        ? body
+        : body
+          ? JSON.stringify(body)
+          : null;
+    const url = new URL(requestUrl);
+
+    const req = https.request(
+      {
+        method,
+        hostname: url.hostname,
+        path: `${url.pathname}${url.search}`,
+        protocol: url.protocol,
+        headers: {
+          "User-Agent": "interviewiq-backend/1.0",
+          ...headers,
+          ...(payload && !headers["Content-Length"]
+            ? { "Content-Length": Buffer.byteLength(payload) }
+            : {}),
+        },
+        timeout,
+      },
+      (res) => {
+        let raw = "";
+        res.setEncoding("utf8");
+
+        res.on("data", (chunk) => {
+          raw += chunk;
+        });
+
+        res.on("end", () => {
+          let parsed = {};
+
+          if (raw) {
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              parsed = { message: raw };
+            }
+          }
+
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parsed);
+            return;
+          }
+
+          const error = new Error(parsed?.error_description || parsed?.error?.message || parsed?.error || parsed?.message || `HTTP ${res.statusCode}`);
+          error.statusCode = res.statusCode;
+          error.payload = parsed;
+          reject(error);
+        });
+      }
+    );
+
+    req.on("timeout", () => {
+      req.destroy(new Error("HTTP request timed out"));
+    });
+
+    req.on("error", (error) => {
+      reject(error);
+    });
+
+    if (payload) {
+      req.write(payload);
+    }
+
+    req.end();
+  });
+
+const getGmailAccessToken = async () => {
+  const body = new URLSearchParams({
+    client_id: email.gmailClientId,
+    client_secret: email.gmailClientSecret,
+    refresh_token: email.gmailRefreshToken,
+    grant_type: "refresh_token",
+  }).toString();
+
+  try {
+    const response = await requestJson(GMAIL_TOKEN_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    if (!response.access_token) {
+      throw new Error("Gmail API access token missing from Google OAuth response");
+    }
+
+    return response.access_token;
+  } catch (error) {
+    const message = error?.message || "Failed to fetch Gmail API access token";
+    throw new Error(`Gmail API authorization failed: ${message}`);
+  }
+};
+
+const buildRawMimeMessage = ({ to, subject, html, text }) => {
+  const boundary = `interviewiq-${Date.now()}`;
+  const message = [
+    `From: ${getFromAddress()}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "",
+    text || "",
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "",
+    html || text || "",
+    "",
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  return Buffer.from(message)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+};
+
 const verifyEmailTransport = async ({ force = false } = {}) => {
   const cacheIsFresh =
     !force &&
@@ -162,6 +394,27 @@ const verifyEmailTransport = async ({ force = false } = {}) => {
     Date.now() - emailVerificationCache.checkedAt < EMAIL_VERIFY_CACHE_MS;
 
   if (cacheIsFresh) {
+    return emailVerificationCache;
+  }
+
+  assertEmailConfig();
+
+  if (isResendProvider()) {
+    emailVerificationCache = {
+      ready: true,
+      checkedAt: Date.now(),
+      transport: RESEND_TRANSPORT_LABEL,
+    };
+    return emailVerificationCache;
+  }
+
+  if (isGmailApiProvider()) {
+    await getGmailAccessToken();
+    emailVerificationCache = {
+      ready: true,
+      checkedAt: Date.now(),
+      transport: GMAIL_API_TRANSPORT_LABEL,
+    };
     return emailVerificationCache;
   }
 
@@ -194,13 +447,11 @@ const verifyEmailTransport = async ({ force = false } = {}) => {
   throw new Error(
     `Email transport verification failed: ${
       emailVerificationCache.error
-    }. Check Gmail app-password setup in backend/README.md and backend/.env.example.`
+    }. Check your configured email provider settings in backend/README.md and backend/.env.example.`
   );
 };
 
-const sendEmail = async ({ to, subject, html, text, maxAttempts = 1 }) => {
-  assertEmailConfig();
-
+const sendViaSmtp = async ({ to, subject, html, text, maxAttempts = 1 }) => {
   const payload = {
     from: getFromAddress(),
     to,
@@ -248,6 +499,87 @@ const sendEmail = async ({ to, subject, html, text, maxAttempts = 1 }) => {
   throw thrownError;
 };
 
+const sendViaResend = async ({ to, subject, html, text, maxAttempts = 1 }) => {
+  try {
+    const response = await withRetry(
+      () =>
+        requestResend("/emails", {
+          body: {
+            from: getFromAddress(),
+            to: [to],
+            subject,
+            html,
+            text,
+          },
+        }),
+      Math.max(1, maxAttempts),
+      1000
+    );
+
+    return {
+      messageId: response.id,
+      deliveredVia: "email",
+      transport: RESEND_TRANSPORT_LABEL,
+    };
+  } catch (error) {
+    console.error("Final email send error:", error.message || error, {
+      transport: error.transport || RESEND_TRANSPORT_LABEL,
+    });
+    throw error;
+  }
+};
+
+const sendViaGmailApi = async ({ to, subject, html, text, maxAttempts = 1 }) => {
+  try {
+    const accessToken = await getGmailAccessToken();
+    const raw = buildRawMimeMessage({ to, subject, html, text });
+
+    const response = await withRetry(
+      () =>
+        requestJson(`${GMAIL_API_BASE_URL}/gmail/v1/users/me/messages/send`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: {
+            raw,
+          },
+        }),
+      Math.max(1, maxAttempts),
+      1000
+    );
+
+    return {
+      messageId: response.id,
+      deliveredVia: "email",
+      transport: GMAIL_API_TRANSPORT_LABEL,
+    };
+  } catch (error) {
+    const message = error?.message || "Gmail API email delivery failed";
+    console.error("Final email send error:", message, {
+      transport: GMAIL_API_TRANSPORT_LABEL,
+    });
+    const thrownError = new Error(message);
+    thrownError.transport = GMAIL_API_TRANSPORT_LABEL;
+    throw thrownError;
+  }
+};
+
+const sendEmail = async ({ to, subject, html, text, maxAttempts = 1 }) => {
+  assertEmailConfig();
+
+  if (isResendProvider()) {
+    return sendViaResend({ to, subject, html, text, maxAttempts });
+  }
+
+  if (isGmailApiProvider()) {
+    return sendViaGmailApi({ to, subject, html, text, maxAttempts });
+  }
+
+  return sendViaSmtp({ to, subject, html, text, maxAttempts });
+};
+
 const sendInterviewSummaryEmail = async (user, interview) => {
   const reportUrl = `${clientUrl}/history`;
   const html = `
@@ -257,7 +589,7 @@ const sendInterviewSummaryEmail = async (user, interview) => {
       <p style="color: #4A5568; font-size: 16px;">
         Your AI-powered mock interview for <strong>${interview.title}</strong> is complete!
       </p>
-      
+
       <div style="background-color: #F7FAFC; padding: 20px; border-radius: 8px; margin: 24px 0;">
         <h3 style="margin-top: 0; color: #2B6CB0;">Performance Score: ${interview.results.score}%</h3>
         <p style="color: #4A5568;"><strong>Key Strengths:</strong> ${interview.results.strengths?.slice(0, 2).join(", ") || "N/A"}</p>

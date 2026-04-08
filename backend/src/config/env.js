@@ -14,6 +14,21 @@ const normalizeEmailSecret = (value) => {
   return normalized || undefined;
 };
 
+const normalizeEmailProvider = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "resend") {
+    return "resend";
+  }
+  if (normalized === "gmail_api") {
+    return "gmail_api";
+  }
+
+  return "smtp";
+};
+
+const normalizedEmailProvider = normalizeEmailProvider(
+  process.env.EMAIL_PROVIDER || (process.env.RESEND_API_KEY ? "resend" : "smtp")
+);
 const normalizedEmailService = String(process.env.EMAIL_SERVICE || "gmail").toLowerCase();
 const normalizedEmailPort = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
 const defaultEmailHost = process.env.EMAIL_HOST || undefined;
@@ -42,6 +57,11 @@ module.exports = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   email: {
+    provider: normalizedEmailProvider,
+    resendApiKey: normalizeEnvString(process.env.RESEND_API_KEY),
+    gmailClientId: normalizeEnvString(process.env.GMAIL_CLIENT_ID),
+    gmailClientSecret: normalizeEnvString(process.env.GMAIL_CLIENT_SECRET),
+    gmailRefreshToken: normalizeEnvString(process.env.GMAIL_REFRESH_TOKEN),
     service: normalizedEmailService,
     user: normalizeEnvString(process.env.EMAIL_USER)?.toLowerCase(),
     pass: normalizeEmailSecret(process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY),
