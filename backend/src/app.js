@@ -40,7 +40,6 @@ const allowedOrigins = [
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow non-browser requests (no Origin header) and known client origins.
       const matchesWildcardOrigin = allowedOriginPatterns.some((pattern) => pattern.test(origin || ""));
 
       if (!origin || allowedOrigins.includes(origin) || matchesWildcardOrigin) {

@@ -146,8 +146,6 @@ userSchema.pre("save", async function () {
 userSchema.methods.isValidPassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
-// FIX: OTP issue — accept custom TTL (default 5min); callers pass OTP_TTL_MS
 userSchema.methods.createOtp = function (purpose = "verify_email", ttlMs = 5 * 60 * 1000) {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   this.otpCode = crypto.createHash("sha256").update(otp).digest("hex");

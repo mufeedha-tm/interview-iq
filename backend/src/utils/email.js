@@ -185,7 +185,7 @@ const tryCloseTransporter = (transporter) => {
   try {
     transporter?.close?.();
   } catch {
-    // Ignore transport close errors.
+   
   }
 };
 

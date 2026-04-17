@@ -1,5 +1,4 @@
-// FIX: 401 refresh-token — store tokens in localStorage, not cookies
-// Cookies fail cross-origin (Vercel frontend → Render backend on free tier)
+
 const USER_KEY = 'interviewiq_user';
 const ACCESS_TOKEN_KEY = 'interviewiq_access_token';
 const REFRESH_TOKEN_KEY = 'interviewiq_refresh_token';
@@ -20,9 +19,6 @@ export function getStoredAccessToken() {
 export function getStoredRefreshToken() {
   return localStorage.getItem(REFRESH_TOKEN_KEY) || null;
 }
-
-// Called after login / signup / token refresh
-// data = { user, accessToken, refreshToken }
 export function storeAuthSession(data) {
   try {
     if (data?.user) {
@@ -35,7 +31,7 @@ export function storeAuthSession(data) {
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     }
   } catch {
-    // localStorage not available (private browsing etc.) — continue silently
+    
   }
 }
 

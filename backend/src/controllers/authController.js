@@ -34,27 +34,18 @@ const serializeUser = (user) => ({
   premiumExpiresAt: user.premiumExpiresAt,
 });
 
-// FIX: 401 refresh-token — always return tokens in body so frontend can use
-// localStorage when cross-origin cookies are blocked (Vercel → Render free tier)
 const createTokenResponse = (user, res) => {
   const accessToken = user.generateJwtToken(jwtSecret, jwtExpiresIn);
   const refreshToken = user.generateJwtRefreshToken(jwtRefreshSecret, jwtRefreshExpiresIn);
   const cookieOptions = getCookieOptions();
-
-  // Set cookies (works when same-origin or paid Render with custom domain)
   res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 });
   res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 });
-
-  // Also return in body — frontend MUST store these and send via Authorization header
   return {
     user: serializeUser(user),
     accessToken,
     refreshToken,
   };
 };
-
-// FIX: 401 refresh-token — extract refresh token from cookie OR Authorization header OR body
-// This handles cross-origin cookie blocking (Vercel frontend → Render backend)
 const extractRefreshToken = (req) => {
   if (req.cookies?.refreshToken) return req.cookies.refreshToken;
   const authHeader = req.headers.authorization;
@@ -62,11 +53,8 @@ const extractRefreshToken = (req) => {
   return req.body?.refreshToken || null;
 };
 
-// FIX: OTP issue — raised timeout from 5s to 10s to survive Gmail SMTP latency on Render
 const OTP_EMAIL_TIMEOUT_MS = Number(process.env.OTP_EMAIL_TIMEOUT_MS || 10_000);
-// FIX: OTP issue — 60s cooldown prevents spam resend clicks
 const OTP_RESEND_COOLDOWN_MS = Number(process.env.OTP_RESEND_COOLDOWN_MS || 60_000);
-// FIX: OTP issue — OTP valid for 5 minutes (used in createOtp calls)
 const OTP_TTL_MS = 5 * 60 * 1000;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
@@ -377,8 +365,6 @@ const signup = async (req, res, next) => {
       text: "Welcome to InterviewIQ! Your verification code is {{OTP}}. Expires in 5 minutes.",
       logLabel: "Signup",
     });
-
-    // FIX: OTP issue — NEVER crash signup on email failure; user is already saved, allow resend
     if (!emailSent) {
       console.warn("[Signup] OTP email failed, user created but email not sent:", emailFallbackReason);
       return res.status(201).json({
@@ -481,8 +467,6 @@ const resendOtp = async (req, res, next) => {
     if (user.isVerified) {
       return res.status(400).json({ message: "Email already verified" });
     }
-
-    // Allow resend once the short cooldown ends; the new OTP replaces any older verification OTP.
     const remainingMs = getOtpCooldownRemainingMs(user);
     if (remainingMs > 0 && user.otpPurpose !== "reset_password") {
       return res.status(429).json(buildOtpCooldownResponse(remainingMs));
@@ -852,11 +836,9 @@ const uploadAvatar = async (req, res, next) => {
   }
 };
 
-// FIX: 401 refresh-token — reads token from cookie, Authorization header, or body
 const refreshToken = async (req, res, next) => {
   const cookieOptions = getCookieOptions();
   try {
-    // FIX: extractRefreshToken checks all 3 sources so cross-origin requests work
     const token = extractRefreshToken(req);
 
     if (!token) {

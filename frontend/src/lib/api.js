@@ -22,16 +22,11 @@ const apiBaseUrl = resolveApiBaseUrl()
 const api = axios.create({
   baseURL: apiBaseUrl,
   headers: { 'Content-Type': 'application/json' },
-  // FIX: 401 refresh-token — do NOT rely on withCredentials for auth
-  // Cookies are blocked cross-origin (Vercel → Render free tier)
-  // We use Authorization header + localStorage tokens instead
   withCredentials: false,
 })
 
 let isRefreshing = false
 let failedQueue = []
-
-// FIX: 401 refresh-token — attach accessToken from localStorage on every request
 api.interceptors.request.use((config) => {
   const token = getStoredAccessToken()
   if (token) {
@@ -81,8 +76,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     if (!originalRequest) return Promise.reject(error)
-
-    // Don't try to refresh on public auth endpoints
     if (shouldSkipTokenRefresh(originalRequest)) return Promise.reject(error)
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -101,7 +94,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        // FIX: 401 refresh-token — send refreshToken in body (NOT via cookies)
+       
         const storedRefreshToken = getStoredRefreshToken()
         if (!storedRefreshToken) {
           throw new Error('No refresh token stored')
@@ -109,21 +102,17 @@ api.interceptors.response.use(
 
         const { data } = await axios.post(
           `${apiBaseUrl}/auth/refresh-token`,
-          { refreshToken: storedRefreshToken }, // FIX: send token in body
+          { refreshToken: storedRefreshToken },
           {
             headers: { 'Content-Type': 'application/json' },
-            withCredentials: false,             // FIX: no cookie dependency
+            withCredentials: false,             
           }
         )
 
-        // Store the new tokens
         storeAuthSession(data)
         const newAccessToken = data.accessToken
-
-        // Retry all queued requests with new token
         processQueue(null, newAccessToken)
 
-        // Retry the original failed request
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`
         return api(originalRequest)
       } catch (err) {
