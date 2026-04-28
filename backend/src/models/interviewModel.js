@@ -45,6 +45,11 @@ const interviewSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     description: { type: String },
+    interviewType: {
+      type: String,
+      enum: ["behavioral", "technical", "mixed", "premium_panel"],
+      default: "mixed",
+    },
     status: {
       type: String,
       enum: ["draft", "in_progress", "completed", "cancelled"],
@@ -59,6 +64,10 @@ const interviewSchema = new mongoose.Schema(
       default: "medium",
     },
     skills: [{ type: String }],
+    premiumCreditConsumed: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

@@ -198,16 +198,22 @@ function StartInterviewPage() {
         throw new Error('No interview questions were generated.')
       }
 
-      const { interview } = await createInterview({
+      const data = await createInterview({
         title: `${form.role} interview`,
         description: form.jobDescription || `${form.interviewType} interview practice session`,
+        interviewType: form.interviewType,
         questions,
         difficulty: form.difficulty,
         skills,
         status: 'draft',
       })
 
-      navigate(`/interview-session?interviewId=${interview._id}`)
+      if (data.user) {
+        updateUserContext(data.user)
+        setUser(data.user)
+      }
+
+      navigate(`/interview-session?interviewId=${data.interview._id}`)
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Unable to create the interview session.')
     } finally {

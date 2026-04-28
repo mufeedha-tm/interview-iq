@@ -1,27 +1,118 @@
 const Interview = require("../models/interviewModel");
+const User = require("../models/userModel");
 const { runInterviewEngine, generateNextQuestionEngine } = require("../services/aiInterviewEngine");
 const { sendInterviewSummaryEmail } = require("../utils/email");
 const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const { listQuestionRoles } = require("../services/questionBankService");
 
+const INTERVIEW_TYPES = ["behavioral", "technical", "mixed", "premium_panel"];
+const PREMIUM_INTERVIEW_TYPE = "premium_panel";
+
+const serializeUser = (user) => ({
+  id: user._id,
+  email: user.email,
+  role: user.role,
+  isVerified: user.isVerified,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  headline: user.headline,
+  targetRole: user.targetRole,
+  experienceLevel: user.experienceLevel,
+  bio: user.bio,
+  avatarUrl: user.avatarUrl,
+  resumeUrl: user.resumeUrl,
+  subscriptionTier: user.subscriptionTier,
+  premiumInterviewsRemaining: user.premiumInterviewsRemaining,
+  premiumExpiresAt: user.premiumExpiresAt,
+});
+
+const normalizeInterviewType = (value) => String(value || "mixed").trim().toLowerCase();
+
+const hasActivePremiumAccess = (user) => {
+  if (user?.subscriptionTier !== "premium") {
+    return false;
+  }
+
+  if (!user.premiumExpiresAt) {
+    return true;
+  }
+
+  return new Date(user.premiumExpiresAt) > new Date();
+};
+
 const createInterview = async (req, res, next) => {
   try {
-    const { title, description, questions = [], difficulty, skills = [] } = req.body;
+    const {
+      title,
+      description,
+      questions = [],
+      difficulty,
+      skills = [],
+      interviewType = "mixed",
+    } = req.body;
+
     if (!title) {
       return res.status(400).json({ message: "Title is required" });
     }
 
-    const interview = await Interview.create({
-      user: req.user._id,
-      title,
-      description,
-      questions,
-      difficulty,
-      skills,
-    });
+    if (!Array.isArray(questions)) {
+      return res.status(400).json({ message: "Questions must be an array" });
+    }
 
-    res.status(201).json({ interview });
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ message: "Skills must be an array" });
+    }
+
+    const normalizedInterviewType = normalizeInterviewType(interviewType);
+    if (!INTERVIEW_TYPES.includes(normalizedInterviewType)) {
+      return res.status(400).json({ message: "Interview type is invalid" });
+    }
+
+    const isPremiumSession = normalizedInterviewType === PREMIUM_INTERVIEW_TYPE;
+    let premiumCreditConsumed = false;
+
+    if (isPremiumSession) {
+      if (!hasActivePremiumAccess(req.user)) {
+        return res.status(403).json({
+          message: "An active premium plan is required to start a premium panel interview.",
+        });
+      }
+
+      if (Number(req.user.premiumInterviewsRemaining || 0) < 1) {
+        return res.status(403).json({
+          message: "No premium interview credits remain. Upgrade your plan to continue.",
+        });
+      }
+
+      req.user.premiumInterviewsRemaining -= 1;
+      await req.user.save();
+      premiumCreditConsumed = true;
+    }
+
+    let interview;
+
+    try {
+      interview = await Interview.create({
+        user: req.user._id,
+        title,
+        description,
+        interviewType: normalizedInterviewType,
+        questions,
+        difficulty,
+        skills,
+        premiumCreditConsumed,
+      });
+    } catch (createError) {
+      if (premiumCreditConsumed) {
+        req.user.premiumInterviewsRemaining += 1;
+        await req.user.save().catch(() => {});
+      }
+
+      throw createError;
+    }
+
+    res.status(201).json({ interview, user: serializeUser(req.user) });
   } catch (error) {
     next(error);
   }
@@ -175,8 +266,6 @@ const deleteInterview = async (req, res, next) => {
     next(error);
   }
 };
-
-const User = require("../models/userModel");
 
 const buildInterviewQuery = async (req) => {
   const { role, startDate, endDate, minScore, maxScore, difficulty, q, status, category } = req.query;
