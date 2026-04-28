@@ -47,7 +47,7 @@ const interviewSchema = new mongoose.Schema(
     description: { type: String },
     interviewType: {
       type: String,
-      enum: ["behavioral", "technical", "mixed", "premium_panel"],
+      enum: ["behavioral", "technical", "system-design", "mixed", "premium_panel"],
       default: "mixed",
     },
     status: {

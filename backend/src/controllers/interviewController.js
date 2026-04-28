@@ -6,7 +6,7 @@ const streamifier = require("streamifier");
 const cloudinary = require("../config/cloudinary");
 const { listQuestionRoles } = require("../services/questionBankService");
 
-const INTERVIEW_TYPES = ["behavioral", "technical", "mixed", "premium_panel"];
+const INTERVIEW_TYPES = ["behavioral", "technical", "system-design", "mixed", "premium_panel"];
 const PREMIUM_INTERVIEW_TYPE = "premium_panel";
 
 const serializeUser = (user) => ({

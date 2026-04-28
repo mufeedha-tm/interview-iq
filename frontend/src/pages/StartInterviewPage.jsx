@@ -316,6 +316,7 @@ function StartInterviewPage() {
               <select className="input-field" name="interviewType" value={form.interviewType} onChange={handleChange}>
                 <option value="behavioral">Behavioral</option>
                 <option value="technical">Technical</option>
+                <option value="system-design">System design</option>
                 <option value="mixed">Mixed</option>
                 <option value="premium_panel">Premium panel</option>
               </select>

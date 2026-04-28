@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Button, Panel, SectionIntro } from '../components/UI'
 import { Icon } from '../components/Icons'
 import { deleteUser, getUserById, getUsers, updateUser } from '../services/userService'
+import { useAuth } from '../context/useAuth'
 
 function formatDate(value) {
   if (!value) return 'Not available'
@@ -47,6 +48,7 @@ function formatDateInputValue(value) {
 }
 
 function AdminUsersPage() {
+  const { user: currentUser } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [users, setUsers] = useState([])
   const [pagination, setPagination] = useState({ page: 1, limit: 10, totalPages: 1, total: 0 })
@@ -68,6 +70,7 @@ function AdminUsersPage() {
   const search = searchParams.get('search') || ''
   const role = searchParams.get('role') || ''
   const page = Number.parseInt(searchParams.get('page') || '1', 10)
+  const currentUserId = currentUser?.id || currentUser?._id || ''
 
   useEffect(() => {
     setFilterForm({ search, role })
@@ -203,6 +206,10 @@ function AdminUsersPage() {
     { label: 'Resume score', value: selectedUserDetails?.resumeEvaluation?.score ?? 'Not scored' },
     { label: 'Premium expires', value: formatDate(selectedUserDetails?.premiumExpiresAt) },
   ]
+
+  function isCurrentAdminAccount(userId) {
+    return Boolean(currentUserId) && String(currentUserId) === String(userId || '')
+  }
 
   function handleSearchSubmit(event) {
     event.preventDefault()
@@ -526,9 +533,10 @@ function AdminUsersPage() {
                                   variant="ghost"
                                   className="px-3 py-2 text-xs text-rose-600 dark:text-rose-200"
                                   onClick={() => handleDelete(user._id)}
+                                  disabled={isCurrentAdminAccount(user._id)}
                                 >
                                   <Icon name="trash" className="h-4 w-4" />
-                                  Delete
+                                  {isCurrentAdminAccount(user._id) ? 'Current admin' : 'Delete'}
                                 </Button>
                               </div>
                             </td>
@@ -627,6 +635,11 @@ function AdminUsersPage() {
                   </div>
 
                   <Panel title="Admin edit controls" copy="Update role, verification, subscription tier, or available premium interviews.">
+                    {isCurrentAdminAccount(selectedUserDetails?._id) ? (
+                      <div className="status-banner border-amber-200 bg-amber-50/90 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+                        Your own admin account cannot be deleted here, and its admin role cannot be removed.
+                      </div>
+                    ) : null}
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label className="space-y-2">
                         <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400 dark:text-ink-300">Role</span>
@@ -634,6 +647,7 @@ function AdminUsersPage() {
                           className="input-field"
                           value={editForm.role}
                           onChange={(event) => setEditForm((current) => ({ ...current, role: event.target.value }))}
+                          disabled={isCurrentAdminAccount(selectedUserDetails?._id)}
                         >
                           <option value="user">User</option>
                           <option value="admin">Admin</option>

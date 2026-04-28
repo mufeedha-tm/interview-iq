@@ -60,6 +60,7 @@ export function AuthProvider({ children }) {
     try {
       await apiLogout()
     } catch {
+      // Clear local auth state even if the logout request fails.
     } finally {
       setUser(null)
       setIsAuthenticated(false)

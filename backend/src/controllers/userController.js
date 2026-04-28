@@ -1,6 +1,12 @@
 const User = require("../models/userModel");
 const Interview = require("../models/interviewModel");
 
+const ADMIN_ROLE = "admin";
+
+function isSameUser(leftId, rightId) {
+  return String(leftId || "") === String(rightId || "");
+}
+
 const getUsers = async (req, res, next) => {
   try {
     const { page = 1, limit = 10, role, search } = req.query;
@@ -81,6 +87,27 @@ const getUserById = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { role, isVerified, subscriptionTier, premiumInterviewsRemaining, premiumExpiresAt } = req.body;
+    const targetUser = await User.findById(req.params.id);
+
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (role !== undefined) {
+      const nextRole = String(role || "").trim().toLowerCase();
+
+      if (targetUser.role === ADMIN_ROLE && nextRole !== ADMIN_ROLE) {
+        if (isSameUser(req.user?._id, targetUser._id)) {
+          return res.status(400).json({ message: "You cannot remove your own admin role." });
+        }
+
+        const adminCount = await User.countDocuments({ role: ADMIN_ROLE });
+        if (adminCount <= 1) {
+          return res.status(400).json({ message: "At least one admin account must remain active." });
+        }
+      }
+    }
+
     const updates = {};
     if (role !== undefined) updates.role = role;
     if (isVerified !== undefined) updates.isVerified = isVerified;
@@ -99,14 +126,10 @@ const updateUser = async (req, res, next) => {
       }
     }
 
-    const user = await User.findByIdAndUpdate(req.params.id, updates, {
+    const user = await User.findByIdAndUpdate(targetUser._id, updates, {
       new: true,
       runValidators: true,
     });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
 
     res.status(200).json({ user });
   } catch (error) {
@@ -116,11 +139,31 @@ const updateUser = async (req, res, next) => {
 
 const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({ message: "User deleted successfully" });
+
+    if (isSameUser(req.user?._id, user._id)) {
+      return res.status(400).json({ message: "You cannot delete your own admin account." });
+    }
+
+    if (user.role === ADMIN_ROLE) {
+      const adminCount = await User.countDocuments({ role: ADMIN_ROLE });
+      if (adminCount <= 1) {
+        return res.status(400).json({ message: "You cannot delete the last remaining admin account." });
+      }
+    }
+
+    const [deletedInterviews] = await Promise.all([
+      Interview.deleteMany({ user: user._id }),
+      User.findByIdAndDelete(user._id),
+    ]);
+
+    res.status(200).json({
+      message: "User and related interviews deleted successfully",
+      deletedInterviews: deletedInterviews.deletedCount || 0,
+    });
   } catch (error) {
     next(error);
   }
