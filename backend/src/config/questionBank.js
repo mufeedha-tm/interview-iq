@@ -121,7 +121,37 @@ const QUESTION_BANK = {
   },
 };
 
-const SUPPORTED_INTERVIEW_TYPES = ["behavioral", "technical", "system-design"];
+function uniqueQuestions(questions = []) {
+  return [...new Set((questions || []).filter(Boolean))];
+}
+
+function buildMixedQuestions(questionLibrary = {}) {
+  return uniqueQuestions([
+    ...(questionLibrary.behavioral || []).slice(0, 2),
+    ...(questionLibrary.technical || []).slice(0, 2),
+  ]);
+}
+
+function buildPremiumPanelQuestions(questionLibrary = {}) {
+  return uniqueQuestions([
+    ...(questionLibrary.technical || []).slice(0, 2),
+    ...(questionLibrary["system-design"] || []).slice(0, 2),
+  ]);
+}
+
+Object.values(QUESTION_BANK).forEach((config) => {
+  const library = config.questionLibrary || {};
+
+  if (!library.mixed?.length) {
+    library.mixed = buildMixedQuestions(library);
+  }
+
+  if (!library.premium_panel?.length) {
+    library.premium_panel = buildPremiumPanelQuestions(library);
+  }
+});
+
+const SUPPORTED_INTERVIEW_TYPES = ["behavioral", "technical", "system-design", "mixed", "premium_panel"];
 
 function normalizeRoleKey(role) {
   const value = String(role || "").trim().toLowerCase();
@@ -143,6 +173,10 @@ function normalizeInterviewType(interviewType) {
 
   if (value === "system design") {
     return "system-design";
+  }
+
+  if (value === "premium panel" || value === "premium-panel") {
+    return "premium_panel";
   }
 
   return "technical";

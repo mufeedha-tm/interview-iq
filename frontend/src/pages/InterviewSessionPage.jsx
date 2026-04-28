@@ -242,7 +242,7 @@ function InterviewSessionPage() {
           const answerText = String(answers[index] || '').trim() || '(No answer provided within time limit)'
           const res = await generateInterviewEngine({
             role: interview.title,
-            interviewType: 'mixed',
+            interviewType: interview.interviewType || 'mixed',
             difficulty: interview.difficulty,
             skills: interview.skills,
             question,
@@ -264,7 +264,7 @@ function InterviewSessionPage() {
 
       const globalEvaluation = await generateInterviewEngine({
         role: interview.title,
-        interviewType: 'mixed',
+        interviewType: interview.interviewType || 'mixed',
         difficulty: interview.difficulty,
         skills: interview.skills,
         question: latestQuestions.join(' '),

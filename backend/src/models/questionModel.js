@@ -15,7 +15,7 @@ const questionSchema = new mongoose.Schema(
     },
     interviewType: {
       type: String,
-      enum: ["behavioral", "technical", "system-design"],
+      enum: ["behavioral", "technical", "system-design", "mixed", "premium_panel"],
       required: true,
     },
     question: {

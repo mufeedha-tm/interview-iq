@@ -185,7 +185,7 @@ function StartInterviewPage() {
     try {
       const engine = await generateInterviewEngine({
         role: form.role,
-        interviewType: form.interviewType === 'premium_panel' ? 'technical' : form.interviewType,
+        interviewType: form.interviewType,
         difficulty: form.difficulty,
         experienceLevel: form.experienceLevel,
         skills,

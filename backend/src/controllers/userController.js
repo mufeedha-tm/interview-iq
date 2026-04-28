@@ -80,12 +80,24 @@ const getUserById = async (req, res, next) => {
 
 const updateUser = async (req, res, next) => {
   try {
-    const { role, isVerified, subscriptionTier, premiumInterviewsRemaining } = req.body;
+    const { role, isVerified, subscriptionTier, premiumInterviewsRemaining, premiumExpiresAt } = req.body;
     const updates = {};
     if (role !== undefined) updates.role = role;
     if (isVerified !== undefined) updates.isVerified = isVerified;
     if (subscriptionTier !== undefined) updates.subscriptionTier = subscriptionTier;
     if (premiumInterviewsRemaining !== undefined) updates.premiumInterviewsRemaining = premiumInterviewsRemaining;
+
+    if (premiumExpiresAt !== undefined) {
+      if (premiumExpiresAt === null || premiumExpiresAt === "") {
+        updates.premiumExpiresAt = null;
+      } else {
+        const parsedPremiumExpiry = new Date(premiumExpiresAt);
+        if (Number.isNaN(parsedPremiumExpiry.getTime())) {
+          return res.status(400).json({ message: "Premium expiry date is invalid" });
+        }
+        updates.premiumExpiresAt = parsedPremiumExpiry;
+      }
+    }
 
     const user = await User.findByIdAndUpdate(req.params.id, updates, {
       new: true,

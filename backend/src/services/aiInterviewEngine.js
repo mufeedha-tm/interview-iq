@@ -20,6 +20,18 @@ const FALLBACK_LIBRARY = {
     "Design a reporting system for interview analytics across multiple candidates and roles.",
     "How would you architect a resume analysis pipeline with role-specific recommendations?",
   ],
+  mixed: [
+    "Tell me about a time you had to make a difficult technical trade-off under pressure.",
+    "How would you debug a production issue that appears intermittently under load?",
+    "Walk me through a time you received tough feedback and how you responded.",
+    "Describe the architecture you would choose for a scalable interview analytics service.",
+  ],
+  premium_panel: [
+    "How would you design a robust API contract between the frontend and backend for live interview sessions?",
+    "Design an interview session platform that supports live scoring and transcript analysis.",
+    "Explain how you would improve the performance of a slow user-facing feature.",
+    "How would you build a follow-up question engine that adapts in real time to candidate responses?",
+  ],
 };
 
 function normalizeText(value) {
@@ -39,6 +51,10 @@ function pickInterviewType(interviewType) {
 
   if (normalized === "system design") {
     return "system-design";
+  }
+
+  if (normalized === "premium panel" || normalized === "premium-panel") {
+    return "premium_panel";
   }
 
   return "technical";

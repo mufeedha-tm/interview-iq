@@ -407,7 +407,7 @@ const generateNextQuestion = async (req, res, next) => {
 
     const nextQuestionText = await generateNextQuestionEngine({
       role: interview.title,
-      interviewType: "mixed",
+      interviewType: interview.interviewType || "mixed",
       difficulty: interview.difficulty,
       skills: interview.skills,
       question,

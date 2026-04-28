@@ -344,6 +344,8 @@ function AdminQuestionsPage() {
                 <option value="behavioral">Behavioral</option>
                 <option value="technical">Technical</option>
                 <option value="system-design">System design</option>
+                <option value="mixed">Mixed</option>
+                <option value="premium_panel">Premium panel</option>
               </select>
               <select className="input-field" name="isActive" value={filters.isActive} onChange={handleFilterChange}>
                 <option value="">All states</option>
@@ -459,6 +461,8 @@ function AdminQuestionsPage() {
                     <option value="behavioral">Behavioral</option>
                     <option value="technical">Technical</option>
                     <option value="system-design">System design</option>
+                    <option value="mixed">Mixed</option>
+                    <option value="premium_panel">Premium panel</option>
                   </select>
                   <input
                     className="input-field"

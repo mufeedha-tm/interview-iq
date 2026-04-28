@@ -33,6 +33,19 @@ function formatDateTime(value) {
   })
 }
 
+function formatDateInputValue(value) {
+  if (!value) return ''
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
 function AdminUsersPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [users, setUsers] = useState([])
@@ -49,6 +62,7 @@ function AdminUsersPage() {
     subscriptionTier: 'free',
     isVerified: false,
     premiumInterviewsRemaining: 0,
+    premiumExpiresAt: '',
   })
 
   const search = searchParams.get('search') || ''
@@ -118,6 +132,7 @@ function AdminUsersPage() {
           subscriptionTier: nextUser?.subscriptionTier || 'free',
           isVerified: Boolean(nextUser?.isVerified),
           premiumInterviewsRemaining: nextUser?.premiumInterviewsRemaining ?? 0,
+          premiumExpiresAt: formatDateInputValue(nextUser?.premiumExpiresAt),
         })
       } catch (error) {
         if (!active) return
@@ -217,6 +232,7 @@ function AdminUsersPage() {
         subscriptionTier: editForm.subscriptionTier,
         isVerified: editForm.isVerified,
         premiumInterviewsRemaining: Number(editForm.premiumInterviewsRemaining) || 0,
+        premiumExpiresAt: editForm.premiumExpiresAt || null,
       }
 
       const { user: updatedUser } = await updateUser(selectedUserDetails._id, payload)
@@ -228,6 +244,7 @@ function AdminUsersPage() {
         subscriptionTier: updatedUser.subscriptionTier || 'free',
         isVerified: Boolean(updatedUser.isVerified),
         premiumInterviewsRemaining: updatedUser.premiumInterviewsRemaining ?? 0,
+        premiumExpiresAt: formatDateInputValue(updatedUser.premiumExpiresAt),
       })
       toast.success('User updated successfully.')
     } catch (error) {
@@ -243,6 +260,7 @@ function AdminUsersPage() {
       subscriptionTier: selectedUserDetails?.subscriptionTier || 'free',
       isVerified: Boolean(selectedUserDetails?.isVerified),
       premiumInterviewsRemaining: selectedUserDetails?.premiumInterviewsRemaining ?? 0,
+      premiumExpiresAt: formatDateInputValue(selectedUserDetails?.premiumExpiresAt),
     })
   }
 
@@ -645,6 +663,21 @@ function AdminUsersPage() {
                             setEditForm((current) => ({
                               ...current,
                               premiumInterviewsRemaining: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <label className="space-y-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400 dark:text-ink-300">Premium expires</span>
+                        <input
+                          className="input-field"
+                          type="date"
+                          value={editForm.premiumExpiresAt}
+                          onChange={(event) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              premiumExpiresAt: event.target.value,
                             }))
                           }
                         />
