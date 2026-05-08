@@ -1,10 +1,17 @@
 const { email } = require("../config/env");
 const { verifyEmailTransport } = require("../utils/email");
 
-const describeConfiguredProvider = () =>
-  email.provider === "resend"
-    ? `Resend API from ${email.fromEmail || "(missing EMAIL_FROM)"}`
-    : `SMTP for ${email.user || "(missing EMAIL_USER)"}`;
+const describeConfiguredProvider = () => {
+  if (email.provider === "resend") {
+    return `Resend API from ${email.fromEmail || "(missing EMAIL_FROM)"}`;
+  }
+
+  if (email.provider === "gmail_api") {
+    return `Gmail API from ${email.fromEmail || "(missing EMAIL_FROM)"}`;
+  }
+
+  return `SMTP for ${email.user || "(missing EMAIL_USER)"}`;
+};
 
 const run = async () => {
   console.log(`Checking ${describeConfiguredProvider()}...`);
