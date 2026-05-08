@@ -31,7 +31,7 @@ export function storeAuthSession(data) {
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
     }
   } catch {
-    // Ignore storage write failures and fall back to in-memory auth state.
+   
   }
 }
 
